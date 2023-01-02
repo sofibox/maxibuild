@@ -2,7 +2,7 @@
 #"=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~="
 # ==================================================
 _APP_SPECIFIC_NAME="Maxibuild"
-_APP_VERSION="0.1"
+_APP_VERSION="0.1.2"
 _APP_STATUS="alpha"
 _APP_INFO="${_APP_SPECIFIC_NAME} is a bash script to manage packages."
 _APP_VERSION_STATUS="${_APP_VERSION}-${_APP_STATUS}"
@@ -13,63 +13,63 @@ _AUTHOR="Author: Arafat Ali | Email: arafat@sofibox.com | (C) 2019-2022"
 # It will not do anything if the required package exist
 # Usage: maxibuild [package(s)]
 # Example: maxibuild curl wget git
+get_status_message() {
+  local retval
+  retval="$1"
+  if [[ "${retval}" -eq 0 ]]; then
+    echo " [ OK ]"
+  else
+    echo " [ FAILED ]"
+    exit 1
+  fi
+}
+
+get_distro() {
+  local arg distro_id distro_version distro_codename
+  arg="$1"
+  if [ -e /etc/os-release ]; then
+    distro_id=$(awk -F= '$1 == "ID" {print $2}' /etc/os-release | LC_ALL=C tr '[:upper:]' '[:lower:]' | tr -d "\"")
+    distro_version=$(awk -F= '$1 == "VERSION_ID" {print $2}' /etc/os-release | tr -d "\"")
+    distro_codename=$(awk -F= '$1 == "VERSION_CODENAME" {print $2}' /etc/os-release | tr -d "\"")
+
+  elif type lsb_release >/dev/null 2>&1; then
+    distro_id=$(lsb_release -si | LC_ALL=C tr '[:upper:]' '[:lower:]')
+    distro_version=$(lsb_release -sr)
+    distro_codename=$(lsb_release -sc)
+  else
+    distro_id=$(uname -s)
+    distro_version=$(uname -r)
+    distro_codename=""
+  fi
+  if [ "${arg}" == "id" ]; then
+    echo "${distro_id}"
+  elif [ "${arg}" == "version" ]; then
+    echo "${distro_version}"
+  elif [ "${arg}" == "codename" ]; then
+    echo "${distro_codename}"
+  fi
+}
+
+# This function is used to convert an integer to ordinal number
+# Usage: ordinal [number]
+# Example: ordinal 1
+# Output: 1st
+to_ordinal() {
+  local integer
+  integer="$1"
+  case "${integer}" in
+  *1[0-9] | *[04-9]) echo "${integer}"th ;;
+  *1) echo "${integer}"st ;;
+  *2) echo "${integer}"nd ;;
+  *3) echo "${integer}"rd ;;
+  esac
+}
+
 maxibuild() {
 
-  get_status_message() {
-      local retval
-      retval="$1"
-      if [[ "${retval}" -eq 0 ]]; then
-        echo " [ OK ]"
-      else
-        echo " [ FAILED ]"
-        exit 1
-      fi
-  }
-
-  get_distro() {
-    local arg distro_id distro_version distro_codename
-    arg="$1"
-    if [ -e /etc/os-release ]; then
-      distro_id=$(awk -F= '$1 == "ID" {print $2}' /etc/os-release | LC_ALL=C tr '[:upper:]' '[:lower:]' | tr -d "\"")
-      distro_version=$(awk -F= '$1 == "VERSION_ID" {print $2}' /etc/os-release | tr -d "\"")
-      distro_codename=$(awk -F= '$1 == "VERSION_CODENAME" {print $2}' /etc/os-release | tr -d "\"")
-
-    elif type lsb_release >/dev/null 2>&1; then
-      distro_id=$(lsb_release -si | LC_ALL=C tr '[:upper:]' '[:lower:]')
-      distro_version=$(lsb_release -sr)
-      distro_codename=$(lsb_release -sc)
-    else
-      distro_id=$(uname -s)
-      distro_version=$(uname -r)
-      distro_codename=""
-    fi
-    if [ "${arg}" == "id" ]; then
-      echo "${distro_id}"
-    elif [ "${arg}" == "version" ]; then
-      echo "${distro_version}"
-    elif [ "${arg}" == "codename" ]; then
-      echo "${distro_codename}"
-    fi
-  }
-
-  # This function is used to convert an integer to ordinal number
-  # Usage: ordinal [number]
-  # Example: ordinal 1
-  # Output: 1st
-  to_ordinal() {
-    local integer
-    integer="$1"
-    case "${integer}" in
-    *1[0-9] | *[04-9]) echo "${integer}"th ;;
-    *1) echo "${integer}"st ;;
-    *2) echo "${integer}"nd ;;
-    *3) echo "${integer}"rd ;;
-    esac
-  }
-
-  local caller required_cmds="$*" missing_count install_success install_failed retval
-  caller="$(basename -- "$0")->${FUNCNAME[0]}"
+  local caller required_cmds="${include_packages[*]}" install_success install_failed retval
   ((missing_count = install_success = install_failed = 0))
+  caller="$(basename -- "$0")->${FUNCNAME[0]}"
 
   # Loop through the received arguments. Do not quote the array, we want split elements:
   for required_cmd in ${required_cmds[*]}; do
@@ -78,11 +78,19 @@ maxibuild() {
     command -v "${required_cmd}" >/dev/null
     cmd_status="$?"
 
+    [[ "${force_install}" == "true" ]] && cmd_status=1
+
     if [[ "${cmd_status}" -eq 1 ]]; then
       ((missing_count++))
       echo ""
-      echo "[${caller}]: Warning, ${required_cmd} is not installed"
+
+      if [[ "${force_install}" == "true" ]]; then
+        echo "[${caller}]: Notice, ${required_cmd} will be installed in --force mode"
+      else
+        echo "[${caller}]: Warning, ${required_cmd} is missing!"
+      fi
       echo ""
+
       # This prevents error if we never run apt-get update when the apt cache is expired
       # When the first missing package is triggered, then we display warning message,
       # and for this first time, we trigger update command to refresh the expired apt cache
@@ -93,7 +101,7 @@ maxibuild() {
         echo ""
       fi
 
-      echo "[${caller}]: ${missing_count}) Installing the $(to_ordinal "${missing_count}") missing package: ${required_cmd} ..."
+      echo "[${caller}]: ${missing_count}) Installing the $(to_ordinal "${missing_count}") package: ${required_cmd} ..."
       echo ""
 
       # Package installation condition here
@@ -101,71 +109,112 @@ maxibuild() {
         [[ $(get_distro id) == "debian" || $(get_distro id) == "ubuntu" ]] && apt-get -y install mailutils
         retval=$?
       elif [ "${required_cmd}" == "ipcalc" ]; then
-       if [[ $(get_distro id) == "debian" || $(get_distro id) == "ubuntu" ]]; then
-        local ipcalc_bin script_install_path
-        script_install_path="/usr/local/opencode/ipcalc"
-        ipcalc_bin="${script_install_path}/build/ipcalc"
+        if [[ $(get_distro id) == "debian" || $(get_distro id) == "ubuntu" ]]; then
+          local ipcalc_bin script_install_path
+          script_install_path="/usr/local/opencode/ipcalc"
+          ipcalc_bin="${script_install_path}/build/ipcalc"
 
-        echo "[${caller}]: Removing the old ipcalc installation ..."
-        apt-get -y remove ipcalc
-        get_status_message "$?"
-        echo ""
+          echo "[${caller}]: Removing the old ipcalc installation ..."
+          apt-get -y remove ipcalc
+          get_status_message "$?"
+          echo ""
 
-        echo "[${caller}]: Removing the old ipcalc directory"
-        rm -rf "${script_install_path}" /usr/local/bin/ipcalc /usr/bin/ipcalc
-        get_status_message "$?"
-        echo ""
+          echo "[${caller}]: Removing the old ipcalc directory"
+          rm -rf "${script_install_path}" /usr/local/bin/ipcalc /usr/bin/ipcalc
+          get_status_message "$?"
+          echo ""
 
-        echo "[${caller}]: Install required packages to build ipcalc ..."
-        apt-get -y install git gcc meson
-        get_status_message "$?"
-        echo ""
+          echo "[${caller}]: Install required packages to build ipcalc ..."
+          apt-get -y install git gcc meson
+          get_status_message "$?"
+          echo ""
 
-        echo "[${caller}]: Creating an installation directory for ipcalc ..."
-        mkdir -p "${script_install_path}"
-        get_status_message "$?"
-        echo ""
+          echo "[${caller}]: Creating an installation directory for ipcalc ..."
+          mkdir -p "${script_install_path}"
+          get_status_message "$?"
+          echo ""
 
-        echo "[${caller}]: Cloning the ipcalc repository ..."
-        git clone https://github.com/sofibox/ipcalc.git "${script_install_path}"
-        get_status_message "$?"
-        echo ""
+          echo "[${caller}]: Cloning the ipcalc repository ..."
+          git clone https://github.com/sofibox/ipcalc.git "${script_install_path}"
+          get_status_message "$?"
+          echo ""
 
+          # Change directory to script_install_path, if failed then exit with a message
+          cd "${script_install_path}" || {
+            echo "Failed to change directory to ${script_install_path}"
+            exit 1
+          }
 
-        # Change directory to script_install_path, if failed then exit with a message
-        cd "${script_install_path}" || { echo "Failed to change directory to ${script_install_path}"; exit 1; }
+          echo "[${caller}]: Configuring ipcalc build type ..."
+          meson setup build --buildtype=release
+          get_status_message "$?"
+          echo ""
 
-        echo "[${caller}]: Configuring ipcalc build type ..."
-        meson setup build --buildtype=release
-        get_status_message "$?"
-        echo ""
+          echo "[${caller}]: Building ipcalc ..."
+          ninja -C build
+          get_status_message "$?"
+          echo ""
 
-        echo "[${caller}]: Building ipcalc ..."
-        ninja -C build
-        get_status_message "$?"
-        echo ""
+          echo "[${caller}]: Giving execution permission to the ipcalc installation script ..."
+          chmod +x ${ipcalc_bin}
+          get_status_message "$?"
+          echo ""
 
-        echo "[${caller}]: Giving execution permission to the ipcalc installation script ..."
-        chmod +x ${ipcalc_bin}
-        get_status_message "$?"
-        echo ""
+          echo "[${caller}]: Creating a symbolic link to the ipcalc installation script ..."
+          ln -s ${ipcalc_bin} /usr/local/bin
+          get_status_message "$?"
+          echo ""
 
-        echo "[${caller}]: Creating a symbolic link to the ipcalc installation script ..."
-        ln -s ${ipcalc_bin} /usr/local/bin
-        get_status_message "$?"
-        echo ""
+          #echo "[${caller}]: Copying sample config file ..."
+          #cp "${script_install_path}/ipcalc.conf.sample" "${script_install_path}/ipcalc.conf"
+          #echo ""
 
-        #echo "[${caller}]: Copying sample config file ..."
-        #cp "${script_install_path}/ipcalc.conf.sample" "${script_install_path}/ipcalc.conf"
-        #echo ""
-
-        echo "[${caller}]: Running ipcalc --version  ..."
-        ipcalc --version
-        get_status_message "$?"
-        echo ""
+          echo "[${caller}]: Running ipcalc --version  ..."
+          ipcalc --version
+          get_status_message "$?"
+          retval=$?
         fi
-      elif [ "${required_cmd}" == "suricata" ]; then
-       :
+      elif [ "${required_cmd}" == "maxipi" ]; then
+        if [[ "$(get_distro id)" == +(debian|ubuntu|centos|almalinux) ]]; then
+          local maxipi_bin script_install_path
+          script_install_path="/usr/local/maxicode/maxipi"
+          maxipi_bin="${script_install_path}/maxipi"
+
+          echo "[${caller}]: Removing the old maxipi directory"
+          rm -rf "${script_install_path}" /usr/local/bin/maxipi /usr/bin/maxipi
+          get_status_message "$?"
+          echo ""
+
+          echo "[${caller}]: Install required packages to build maxipi ..."
+          apt-get -y install git gcc meson
+          get_status_message "$?"
+          echo ""
+
+          echo "[${caller}]: Creating an installation directory for maxipi ..."
+          mkdir -p "${script_install_path}"
+          get_status_message "$?"
+          echo ""
+
+          echo "[${caller}]: Cloning the maxipi repository ..."
+          git clone https://github.com/sofibox/maxipi_public.git "${script_install_path}"
+          get_status_message "$?"
+          echo ""
+
+          echo "[${caller}]: Giving execution permission to the maxipi installation script ..."
+          chmod +x ${maxipi_bin}
+          get_status_message "$?"
+          echo ""
+
+          echo "[${caller}]: Creating a symbolic link to the maxipi installation script ..."
+          ln -s ${maxipi_bin} /usr/local/bin
+          get_status_message "$?"
+          echo ""
+
+          echo "[${caller}]: Running maxipi --version  ..."
+          maxipi --version
+          get_status_message "$?"
+          retval=$?
+        fi
 
       else
         # Do apt installation
@@ -178,13 +227,13 @@ maxibuild() {
       else
         ((install_failed++))
       fi
+
     fi
+
   done
   if [ "${install_failed}" -gt 0 ]; then
     echo ""
-    echo "Total missing component: ${missing_count}"
-    echo "Total success installed: ${install_success}"
-    echo "Total failed installed: ${install_failed}"
+    echo "[${caller}]: Total failed installed: ${install_failed}/${missing_count}"
     echo ""
     exit 1
   else
@@ -192,18 +241,44 @@ maxibuild() {
   fi
 }
 
-if [[ "${1}" == "--version" || "${1}" == "-V" ]]; then
-  echo "=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~="
-  echo ""
-  echo "Info: ${_APP_INFO}"
-  echo ""
-  echo "Version: ${_APP_VERSION_STATUS}"
-  echo ""
-  echo "${_AUTHOR}"
-  echo ""
-  echo "=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~="
-  exit $?
-else
-  maxibuild "$@"
-fi
+declare caller force_install include_packages
+caller="$(basename -- "$0")->${FUNCNAME[0]}"
 
+force_install=false
+include_packages=""
+
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+  -v | -V | --version | version)
+    echo "=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~="
+    echo ""
+    echo "Info: ${_APP_INFO}"
+    echo ""
+    echo "Version: ${_APP_VERSION_STATUS}"
+    echo ""
+    echo "${_AUTHOR}"
+    echo ""
+    echo "=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~="
+    exit $?
+    ;;
+  -f | --force-install)
+    force_install=true
+    shift
+    ;;
+  -i | -l | -p | --include | --list | --packages)
+    include_packages="$2"
+    shift 2
+    ;;
+  --)
+    break
+    ;;
+  *)
+    echo "[${caller}]: Error, invalid  or option [ $1 ]. Use --help to see the valid actions or options"
+    exit 1
+
+    ;;
+  esac
+
+done
+
+maxibuild "$@"
