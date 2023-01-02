@@ -2,7 +2,7 @@
 #"=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~="
 # ==================================================
 _APP_SPECIFIC_NAME="Maxibuild"
-_APP_VERSION="0.1.2"
+_APP_VERSION="0.1.3"
 _APP_STATUS="alpha"
 _APP_INFO="${_APP_SPECIFIC_NAME} is a bash script to manage packages."
 _APP_VERSION_STATUS="${_APP_VERSION}-${_APP_STATUS}"
@@ -95,10 +95,20 @@ maxibuild() {
       # When the first missing package is triggered, then we display warning message,
       # and for this first time, we trigger update command to refresh the expired apt cache
       if [ "${missing_count}" -eq 1 ]; then
-        echo "[${caller}]: Running apt-get update for the first time ..."
-        [[ $(get_distro id) == "debian" || $(get_distro id) == "ubuntu" ]] && apt-get -qq -y update
+        echo "[${caller}]: Running system update for the first time ..."
+        [[ "$(get_distro id)" == +(debian|ubuntu) ]] && apt-get -qq -y update
         get_status_message "$?"
         echo ""
+
+        # Check if git is installed (it is necessary)
+        if ! command -v git >/dev/null; then
+          echo "[${caller}]: Warning, git is missing!"
+          echo ""
+          echo "[${caller}]: Installing git ..."
+          [[ "$(get_distro id)" == +(debian|ubuntu) ]] && apt-get -qq -y install git
+          get_status_message "$?"
+          echo ""
+        fi
       fi
 
       echo "[${caller}]: ${missing_count}) Installing the $(to_ordinal "${missing_count}") package: ${required_cmd} ..."
@@ -106,10 +116,10 @@ maxibuild() {
 
       # Package installation condition here
       if [ "${required_cmd}" == "mail" ]; then
-        [[ $(get_distro id) == "debian" || $(get_distro id) == "ubuntu" ]] && apt-get -y install mailutils
+        [[ "$(get_distro id)" == +(debian|ubuntu) ]] && apt-get -y install mailutils
         retval=$?
       elif [ "${required_cmd}" == "ipcalc" ]; then
-        if [[ $(get_distro id) == "debian" || $(get_distro id) == "ubuntu" ]]; then
+        if [[ "$(get_distro id)" == +(debian|ubuntu) ]]; then
           local ipcalc_bin script_install_path
           script_install_path="/usr/local/opencode/ipcalc"
           ipcalc_bin="${script_install_path}/build/ipcalc"
@@ -186,7 +196,7 @@ maxibuild() {
           echo ""
 
           echo "[${caller}]: Install required packages to build maxipi ..."
-          apt-get -y install git gcc meson
+          apt-get -y install gcc meson
           get_status_message "$?"
           echo ""
 
@@ -215,11 +225,78 @@ maxibuild() {
           get_status_message "$?"
           retval=$?
         fi
+      elif [[ "${required_cmd}" == "maxiaide" ]]; then
+        if [[ "$(get_distro id)" == +(debian|ubuntu) ]]; then
+          local maxiaide_bin script_install_path
+          script_install_path="/usr/local/maxicode/maxiaide"
+          maxiaide_bin="${script_install_path}/maxiaide"
+
+          echo "[${caller}]: Removing aide aide-common..."
+
+          apt-get -y remove aide aide-common
+          get_status_message "$?"
+          echo ""
+
+          echo "[${caller}]: Purging aide aide-common..."
+          apt-get -y purge aide-common
+          get_status_message "$?"
+          echo ""
+
+          echo "[${caller}]: Removing the old maxiaide directory"
+          rm -rf "${script_install_path}" /usr/local/bin/maxiaide /usr/bin/maxiaide
+
+          echo "[${caller}]: Install AIDE required packages ..."
+          apt-get -y install aide
+          get_status_message "$?"
+          echo ""
+
+          echo "[${caller}]: Creating an installation directory for maxiaide ..."
+          mkdir -p "${script_install_path}"
+          get_status_message "$?"
+          echo ""
+
+          echo "[${caller}]: Cloning the maxiaide repository ..."
+          git clone https://github.com/sofibox/maxiaide_public.git "${script_install_path}"
+          get_status_message "$?"
+          echo ""
+
+          echo "[${caller}]: Giving execution permission to the maxiaide installation script ..."
+          chmod +x ${maxiaide_bin}
+          get_status_message "$?"
+          echo ""
+
+          echo "[${caller}]: Creating a symbolic link to the maxiaide installation script ..."
+          ln -s ${maxiaide_bin} /usr/local/bin
+          get_status_message "$?"
+          echo ""
+
+          echo "[${caller}]: Copying sample config file ..."
+          cp "${script_install_path}/maxiaide.conf.sample" "${script_install_path}/maxiaide.conf"
+          get_status_message "$?"
+          echo ""
+
+          echo "[${caller}]: Running maxiaide --version  ..."
+          maxiaide --version
+          get_status_message "$?"
+          retval=$?
+
+          # Extra steps for Debian
+          if [ -f /etc/cron.daily/aide ]; then
+            echo "[${caller}]: Removing /etc/cron.daily/aide ..."
+            rm -fv /etc/cron.daily/aide
+            get_status_message "$?"
+          fi
+        fi
 
       else
-        # Do apt installation
-        [[ $(get_distro id) == "debian" || $(get_distro id) == "ubuntu" ]] && apt-get -y install "${required_cmd}"
-        retval=$?
+        # Do normal distro installation
+        if [[ "$(get_distro id)" == +(debian|ubuntu) ]]; then
+          apt-get -y install "${required_cmd}"
+          retval=$?
+        elif [[ "$(get_distro id)" == +(centos|almalinux|rockylinux) ]]; then
+          dnf -y install "${required_cmd}"
+          retval=$?
+        fi
       fi
 
       if [[ "${retval}" -eq 0 ]]; then
@@ -234,10 +311,9 @@ maxibuild() {
   if [ "${install_failed}" -gt 0 ]; then
     echo ""
     echo "[${caller}]: Total failed installed: ${install_failed}/${missing_count}"
-    echo ""
-    exit 1
+    get_status_message 1
   else
-    exit 0
+    return 0
   fi
 }
 
