@@ -28,7 +28,7 @@ chmod +x install.sh
 and then you can use it in your script and terminal like this
 
 # YOUR CODE
-maxibuild --include "git" "htop" "vim"
+maxibuild --include "git htop vim"
 # YOUR CODE
 
 ````
@@ -37,5 +37,5 @@ maxibuild --include "git" "htop" "vim"
 
 ````
 To force build and install a package use the option --force-install
-maxibuild --include "git" "htop" "vim" --force-install
+maxibuild --include "git htop vim" --force-install
 ````
