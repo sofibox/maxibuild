@@ -2,7 +2,7 @@
 #"=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~="
 # ==================================================
 _APP_SPECIFIC_NAME="Maxibuild"
-_APP_VERSION="0.1.4"
+_APP_VERSION="0.1.5"
 _APP_STATUS="alpha"
 _APP_INFO="${_APP_SPECIFIC_NAME} is a bash script to manage packages."
 _APP_VERSION_STATUS="${_APP_VERSION}-${_APP_STATUS}"
@@ -287,57 +287,109 @@ maxibuild() {
             get_status_message "$?"
           fi
         fi
-    elif [[ "${required_cmd}" == "maxigpg" ]]; then
-      if [[ "$(get_distro id)" == +(debian|ubuntu) ]]; then
-        local maxigpg_bin script_install_path
-        script_install_path="/usr/local/maxicode/maxigpg"
-        maxigpg_bin="${script_install_path}/maxigpg"
+      elif [[ "${required_cmd}" == "maxigpg" ]]; then
+        if [[ "$(get_distro id)" == +(debian|ubuntu) ]]; then
+          local maxigpg_bin script_install_path
+          script_install_path="/usr/local/maxicode/maxigpg"
+          maxigpg_bin="${script_install_path}/maxigpg"
 
-        echo "[${caller}]: Removing GPG ..."
-        apt-get -y remove gpg
-        get_status_message "$?"
-        echo ""
+          echo "[${caller}]: Removing GPG ..."
+          apt-get -y remove gpg
+          get_status_message "$?"
+          echo ""
 
-        echo "[${caller}]: Removing the old maxigpg directory"
-        rm -rf "${script_install_path}" /usr/local/bin/maxigpg /usr/bin/maxigpg
-        get_status_message "$?"
-        echo ""
+          echo "[${caller}]: Removing the old maxigpg directory"
+          rm -rf "${script_install_path}" /usr/local/bin/maxigpg /usr/bin/maxigpg
+          get_status_message "$?"
+          echo ""
 
-        echo "[${caller}]: Install maxigpg required packages ..."
-        apt-get -y install gpg
-        get_status_message "$?"
-        echo ""
+          echo "[${caller}]: Install maxigpg required packages ..."
+          apt-get -y install gpg
+          get_status_message "$?"
+          echo ""
 
-        echo "[${caller}]: Creating an installation directory for maxigpg ..."
-        mkdir -p "${script_install_path}"
-        get_status_message "$?"
-        echo ""
+          echo "[${caller}]: Creating an installation directory for maxigpg ..."
+          mkdir -p "${script_install_path}"
+          get_status_message "$?"
+          echo ""
 
-        echo "[${caller}]: Cloning the maxigpg repository ..."
-        git clone https://github.com/sofibox/maxigpg_public.git "${script_install_path}"
-        get_status_message "$?"
-        echo ""
+          echo "[${caller}]: Cloning the maxigpg repository ..."
+          git clone https://github.com/sofibox/maxigpg_public.git "${script_install_path}"
+          get_status_message "$?"
+          echo ""
 
-        echo "[${caller}]: Giving execution permission to the maxigpg installation script ..."
-        chmod +x ${maxigpg_bin}
-        get_status_message "$?"
-        echo ""
+          echo "[${caller}]: Giving execution permission to the maxigpg installation script ..."
+          chmod +x ${maxigpg_bin}
+          get_status_message "$?"
+          echo ""
 
-        echo "[${caller}]: Creating a symbolic link to the maxigpg installation script ..."
-        ln -s ${maxigpg_bin} /usr/local/bin
-        get_status_message "$?"
-        echo ""
+          echo "[${caller}]: Creating a symbolic link to the maxigpg installation script ..."
+          ln -s ${maxigpg_bin} /usr/local/bin
+          get_status_message "$?"
+          echo ""
 
-        echo "[${caller}]: Copying sample config file ..."
-        cp "${script_install_path}/maxigpg.conf.sample" "${script_install_path}/maxigpg.conf"
-        get_status_message "$?"
-        echo ""
+          echo "[${caller}]: Copying sample config file ..."
+          cp "${script_install_path}/maxigpg.conf.sample" "${script_install_path}/maxigpg.conf"
+          get_status_message "$?"
+          echo ""
 
-        echo "[${caller}]: Running maxigpg --version  ..."
-        maxigpg --version
-        get_status_message "$?"
-        retval=$?
-      fi
+          echo "[${caller}]: Running maxigpg --version  ..."
+          maxigpg --version
+          get_status_message "$?"
+          retval=$?
+        fi
+      elif [[ "${required_cmd}" == "maxiperm" ]]; then
+        if [[ "$(get_distro id)" == +(debian|ubuntu) ]]; then
+          local maxiperm_bin perm_bin script_install_path
+          script_install_path="/usr/local/maxicode/maxiperm"
+          maxiperm_bin="${script_install_path}/maxiperm"
+          perm_bin="${script_install_path}/perm"
+
+          echo "[${caller}]: Removing the old maxiperm directory"
+          rm -rf "${script_install_path}" /usr/local/bin/maxiperm /usr/bin/maxiperm /usr/local/bin/perm /usr/bin/perm
+          get_status_message "$?"
+          echo ""
+
+          echo "[${caller}]: Creating an installation directory for maxiperm ..."
+          mkdir -p "${script_install_path}"
+          get_status_message "$?"
+          echo ""
+
+          echo "[${caller}]: Cloning the maxiperm repository ..."
+          git clone https://github.com/sofibox/maxiperm_public.git "${script_install_path}"
+          get_status_message "$?"
+          echo ""
+
+          echo "[${caller}]: Giving execution permission to the maxiperm installation script ..."
+          chmod +x ${maxiperm_bin}
+          get_status_message "$?"
+          echo ""
+
+          echo "[${caller}]: Creating a symbolic link to the maxiperm installation script ..."
+          ln -s ${maxiperm_bin} /usr/local/bin
+          get_status_message "$?"
+          echo ""
+
+          echo "[${caller}]: Giving execution permission to the perm installation script ..."
+          chmod +x ${perm_bin}
+          get_status_message "$?"
+          echo ""
+
+          echo "[${caller}]: Creating a symbolic link to the perm installation script ..."
+          ln -s ${perm_bin} /usr/local/bin
+          get_status_message "$?"
+          echo ""
+
+          echo "[${caller}]: Copying sample config file ..."
+          cp "${script_install_path}/maxiperm.conf.sample" "${script_install_path}/maxiperm.conf"
+          get_status_message "$?"
+          echo ""
+
+          echo "[${caller}]: Running maxiperm --version  ..."
+          maxiperm --version
+          get_status_message "$?"
+          retval=$?
+        fi
       else
         # Do normal distro installation
         if [[ "$(get_distro id)" == +(debian|ubuntu) ]]; then
