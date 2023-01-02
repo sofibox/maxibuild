@@ -2,7 +2,7 @@
 #"=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~="
 # ==================================================
 _APP_SPECIFIC_NAME="Maxibuild"
-_APP_VERSION="0.1.5"
+_APP_VERSION="0.1.6"
 _APP_STATUS="alpha"
 _APP_INFO="${_APP_SPECIFIC_NAME} is a bash script to manage packages."
 _APP_VERSION_STATUS="${_APP_VERSION}-${_APP_STATUS}"
@@ -390,6 +390,64 @@ maxibuild() {
           get_status_message "$?"
           retval=$?
         fi
+      elif [[ "${required_cmd}" == "maxida" ]]; then
+        if [[ "$(get_distro id)" == +(debian|ubuntu) ]]; then
+          local maxida_bin dacli_bin script_install_path
+          script_install_path="/usr/local/maxicode/maxida"
+          maxida_bin="${script_install_path}/maxida"
+          dacli_bin="${script_install_path}/dacli"
+
+          echo "[${caller}]: Removing the old maxida directory"
+          rm -rf "${script_install_path}" /usr/local/bin/maxida /usr/bin/maxida /usr/local/bin/dacli /usr/bin/dacli
+          get_status_message "$?"
+          echo ""
+
+          echo "[${caller}]: Creating an installation directory for maxida ..."
+          mkdir -p "${script_install_path}"
+          get_status_message "$?"
+          echo ""
+
+          echo "[${caller}]: Cloning the maxida repository ..."
+          git clone https://github.com/sofibox/maxida_public.git "${script_install_path}"
+          get_status_message "$?"
+          echo ""
+
+          echo "[${caller}]: Giving execution permission to the maxida installation script ..."
+          chmod +x ${maxida_bin}
+          get_status_message "$?"
+          echo ""
+
+          echo "[${caller}]: Creating a symbolic link to the maxida installation script ..."
+          ln -s ${maxida_bin} /usr/local/bin
+          get_status_message "$?"
+          echo ""
+
+          echo "[${caller}]: Giving execution permission to the dacli installation script ..."
+          chmod +x ${dacli_bin}
+          get_status_message "$?"
+          echo ""
+
+          echo "[${caller}]: Creating a symbolic link to the dacli installation script ..."
+          ln -s ${dacli_bin} /usr/local/bin
+          get_status_message "$?"
+          echo ""
+
+
+          echo "[${caller}]: Copying sample config file ..."
+          cp "${script_install_path}/maxida.conf.sample" "${script_install_path}/maxida.conf"
+          get_status_message "$?"
+          echo ""
+
+          echo "[${caller}]: Running maxida --version  ..."
+          maxida --version
+          get_status_message "$?"
+          retval=$?
+
+
+        fi
+      elif [[ "${required_cmd}" == "ip" ]]; then
+        [[ "$(get_distro id)" == +(debian|ubuntu) ]] && apt-get -y install iproute2
+        retval=$?
       else
         # Do normal distro installation
         if [[ "$(get_distro id)" == +(debian|ubuntu) ]]; then
