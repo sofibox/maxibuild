@@ -2,7 +2,7 @@
 #"=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~="
 # ==================================================
 _APP_SPECIFIC_NAME="Maxibuild"
-_APP_VERSION="0.1.6"
+_APP_VERSION="0.1.7"
 _APP_STATUS="alpha"
 _APP_INFO="${_APP_SPECIFIC_NAME} is a bash script to manage packages."
 _APP_VERSION_STATUS="${_APP_VERSION}-${_APP_STATUS}"
@@ -432,7 +432,6 @@ maxibuild() {
           get_status_message "$?"
           echo ""
 
-
           echo "[${caller}]: Copying sample config file ..."
           cp "${script_install_path}/maxida.conf.sample" "${script_install_path}/maxida.conf"
           get_status_message "$?"
@@ -443,10 +442,14 @@ maxibuild() {
           get_status_message "$?"
           retval=$?
 
-
         fi
+
       elif [[ "${required_cmd}" == "ip" ]]; then
         [[ "$(get_distro id)" == +(debian|ubuntu) ]] && apt-get -y install iproute2
+        retval=$?
+      elif [[ "${required_cmd}" == +(dig|nslookup) ]]; then
+        [[ "$(get_distro id)" == +(debian|ubuntu) ]] && apt-get -y install dnsutils
+        [[ "$(get_distro id)" == +(centos|almalinux|rockylinux) ]] && apt-get -y install bind-utils
         retval=$?
       else
         # Do normal distro installation
@@ -483,8 +486,24 @@ caller="$(basename -- "$0")->${FUNCNAME[0]}"
 force_install=false
 include_packages=""
 
+# If no argument is supplied we quit
+if [[ $# -eq 0 ]]; then
+  echo "Usage: ${caller} [-f] [-i package1,package2,...] [-h]"
+  echo "  -f: Force install of packages"
+  echo "  -i: Include packages"
+  echo "  -h: Show this help"
+  exit 1
+fi
+
 while [ "$#" -gt 0 ]; do
   case "$1" in
+  -h | --help)
+    echo "Usage: ${caller} [-f] [-i package1,package2,...] [-h]"
+    echo "  -f: Force install of packages"
+    echo "  -i: Include packages"
+    echo "  -h: Show this help"
+    exit 0
+    ;;
   -v | -V | --version | version)
     echo "=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~="
     echo ""
