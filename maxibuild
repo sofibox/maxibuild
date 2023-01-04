@@ -281,10 +281,16 @@ maxibuild() {
           #cp "${script_install_path}/ipcalc.conf.sample" "${script_install_path}/ipcalc.conf"
           #echo ""
 
-          echo "[${caller}]: Running ipcalc --version  ..."
-          ipcalc --version
-          get_status_message "$?"
-          retval=$?
+          # echo "[${caller}]: Running ipcalc --version  ..."
+          # ipcalc --version
+          # get_status_message "$?"
+          # retval=$?
+
+          if command -v ipcalc >/dev/null; then
+            retval=0
+          else
+            retval=1
+          fi
         fi
       elif [ "${required_cmd}" == "maxipi" ]; then
         if [[ "$(get_distro id)" == +(debian|ubuntu|centos|almalinux) ]]; then
@@ -322,10 +328,16 @@ maxibuild() {
           get_status_message "$?"
           echo ""
 
-          echo "[${caller}]: Running maxipi --version  ..."
-          maxipi --version
-          get_status_message "$?"
-          retval=$?
+          #echo "[${caller}]: Running maxipi --version  ..."
+          #maxipi --version
+          #get_status_message "$?"
+          #retval=$?
+
+          if command -v maxipi &>/dev/null; then
+            retval=0
+          else
+            retval=1
+          fi
         fi
       elif [[ "${required_cmd}" == "maxiaide" ]]; then
         if [[ "$(get_distro id)" == +(debian|ubuntu) ]]; then
@@ -377,10 +389,10 @@ maxibuild() {
           get_status_message "$?"
           echo ""
 
-          echo "[${caller}]: Running maxiaide --version  ..."
-          maxiaide --version
-          get_status_message "$?"
-          retval=$?
+          #echo "[${caller}]: Running maxiaide --version  ..."
+          #maxiaide --version
+          #get_status_message "$?"
+          #retval=$?
 
           # Extra steps for Debian
           if [ -f /etc/cron.daily/aide ]; then
@@ -388,6 +400,14 @@ maxibuild() {
             rm -fv /etc/cron.daily/aide
             get_status_message "$?"
           fi
+
+          if command -v maxiaide &>/dev/null; then
+            retval=0
+          else
+            retval=1
+
+          fi
+
         fi
       elif [[ "${required_cmd}" == "maxigpg" ]]; then
         if [[ "$(get_distro id)" == +(debian|ubuntu) ]]; then
@@ -435,10 +455,17 @@ maxibuild() {
           get_status_message "$?"
           echo ""
 
-          echo "[${caller}]: Running maxigpg --version  ..."
-          maxigpg --version
-          get_status_message "$?"
-          retval=$?
+          #echo "[${caller}]: Running maxigpg --version  ..."
+          #maxigpg --version
+          #get_status_message "$?"
+          #retval=$?
+
+          if command -v maxigpg &>/dev/null; then
+            retval=0
+          else
+            retval=1
+          fi
+
         fi
       elif [[ "${required_cmd}" == "maxiperm" ]]; then
         if [[ "$(get_distro id)" == +(debian|ubuntu) ]]; then
@@ -487,10 +514,16 @@ maxibuild() {
           get_status_message "$?"
           echo ""
 
-          echo "[${caller}]: Running maxiperm --version  ..."
-          maxiperm --version
-          get_status_message "$?"
-          retval=$?
+          # echo "[${caller}]: Running maxiperm --version  ..."
+          # maxiperm --version
+          # get_status_message "$?"
+          # retval=$?
+
+          if command -v perm &>/dev/null; then
+            retval=0
+          else
+            retval=1
+          fi
         fi
       elif [[ "${required_cmd}" == "maxida" ]]; then
         if [[ "$(get_distro id)" == +(debian|ubuntu) ]]; then
@@ -539,11 +572,15 @@ maxibuild() {
           get_status_message "$?"
           echo ""
 
-          echo "[${caller}]: Running maxida --version  ..."
-          maxida --version
-          get_status_message "$?"
-          retval=$?
-
+          # echo "[${caller}]: Running maxida --version  ..."
+          # maxida --version
+          # get_status_message "$?"
+          # retval=$?
+          if command -v maxida &>/dev/null; then
+            retval=0
+          else
+            retval=1
+          fi
         fi
       elif [ "${required_cmd}" == "dbxcli" ]; then
         if [[ "$(get_distro id)" == +(debian|ubuntu) ]]; then
@@ -567,12 +604,10 @@ maxibuild() {
           get_status_message "$?"
           echo ""
 
-
           echo "[${caller}]: Giving execution permission to the ${dropbox_uploader_bin} installation script ..."
           chmod +x "${dropbox_uploader_bin}"
           get_status_message "$?"
           echo ""
-
 
           echo "[${caller}]: Giving execution permission to the dbxcli installation script ..."
           chmod +x "${dbxcli_bin}"
@@ -584,15 +619,21 @@ maxibuild() {
           get_status_message "$?"
           echo ""
 
+          # echo "[${caller}]: Running dbxcli version  ..."
+          # dbxcli version
+          # get_status_message "$?"
+          # retval=$?
 
-          echo "[${caller}]: Running dbxcli version  ..."
-          dbxcli version
-          get_status_message "$?"
-          retval=$?
+          if command -v dbxcli &>/dev/null; then
+            retval=0
+          else
+            retval=1
+          fi
         fi
 
-
-      elif [[ "${required_cmd}" == "ip" ]]; then
+      elif
+        [[ "${required_cmd}" == "ip" ]]
+      then
         [[ "$(get_distro id)" == +(debian|ubuntu) ]] && apt-get -y install iproute2
         retval=$?
       elif [[ "${required_cmd}" == +(dig|nslookup) ]]; then
