@@ -2,7 +2,7 @@
 #"=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~="
 # ==================================================
 _APP_SPECIFIC_NAME="Maxibuild"
-_APP_VERSION="0.1.8"
+_APP_VERSION="0.1.9"
 _APP_STATUS="alpha"
 _APP_INFO="${_APP_SPECIFIC_NAME} is a bash script to manage packages."
 _APP_VERSION_STATUS="${_APP_VERSION}-${_APP_STATUS}"
@@ -10,8 +10,8 @@ _AUTHOR="Author: Arafat Ali | Email: arafat@sofibox.com | (C) 2019-2022"
 # ====================================================
 
 # This script is used to update script from a remote repository based on a given path
-# Usage: update_script [script_path]
-# Example: update_script /opt/maxigpg_public/
+# Usage: script_update [script_path]
+# Example: script_update /opt/maxigpg_public/
 script_update() {
   local script_name script_path caller script_install_path current_configs new_configs
 
@@ -33,8 +33,6 @@ script_update() {
   git reset --hard origin/main
   get_status_message "$?"
   echo "END git update information:"
-  echo ""
-  navigate_to "PREVIOUS"
   echo ""
 
   echo "[${caller}]: Updating ${script_name} configuration file ..."
@@ -547,6 +545,52 @@ maxibuild() {
           retval=$?
 
         fi
+      elif [ "${required_cmd}" == "dbxcli" ]; then
+        if [[ "$(get_distro id)" == +(debian|ubuntu) ]]; then
+          local dbxcli_bin script_install_path
+          script_install_path="/usr/local/opencode/dbxcli"
+          dbxcli_bin="${script_install_path}/dbxcli"
+          dropbox_uploader_bin="${script_install_path}/dropbox_uploader.sh"
+
+          echo "[${caller}]: Removing the old dbxcli directory"
+          rm -rf "${script_install_path}" /usr/local/bin/dbxcli /usr/bin/dbxcli
+          get_status_message "$?"
+          echo ""
+
+          echo "[${caller}]: Creating an installation directory for dbxcli ..."
+          mkdir -p "${script_install_path}"
+          get_status_message "$?"
+          echo ""
+
+          echo "[${caller}]: Cloning the dbxcli repository ..."
+          git clone https://github.com/sofibox/dbxcli.git "${script_install_path}"
+          get_status_message "$?"
+          echo ""
+
+
+          echo "[${caller}]: Giving execution permission to the ${dropbox_uploader_bin} installation script ..."
+          chmod +x "${dropbox_uploader_bin}"
+          get_status_message "$?"
+          echo ""
+
+
+          echo "[${caller}]: Giving execution permission to the dbxcli installation script ..."
+          chmod +x "${dbxcli_bin}"
+          get_status_message "$?"
+          echo ""
+
+          echo "[${caller}]: Creating a symbolic link to the dbxcli installation script ..."
+          ln -s "${dbxcli_bin}" /usr/local/bin
+          get_status_message "$?"
+          echo ""
+
+
+          echo "[${caller}]: Running dbxcli version  ..."
+          dbxcli version
+          get_status_message "$?"
+          retval=$?
+        fi
+
 
       elif [[ "${required_cmd}" == "ip" ]]; then
         [[ "$(get_distro id)" == +(debian|ubuntu) ]] && apt-get -y install iproute2
@@ -592,7 +636,7 @@ include_packages=""
 
 # If no argument is supplied we quit
 if [[ $# -eq 0 ]]; then
-  echo "Usage: ${caller} [-f] [-i package1,package2,...] [-h]"
+  echo "Usage: $(basename -- "$0") [-f] [-i package1,package2,...] [-h]"
   echo "  -f: Force install of packages"
   echo "  -i: Include packages"
   echo "  -h: Show this help"
@@ -602,7 +646,7 @@ fi
 while [ "$#" -gt 0 ]; do
   case "$1" in
   -h | --help)
-    echo "Usage: ${caller} [-f] [-i package1,package2,...] [-h]"
+    echo "Usage: $(basename -- "$0") [-f] [-i package1,package2,...] [-h]"
     echo "  -f: Force install of packages"
     echo "  -i: Include packages"
     echo "  -h: Show this help"
@@ -628,7 +672,7 @@ while [ "$#" -gt 0 ]; do
     include_packages="$2"
     shift 2
     ;;
-  -u | --update)
+  -u | --update | update)
     check_update
     exit $?
     ;;
