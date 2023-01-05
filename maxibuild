@@ -2,7 +2,7 @@
 #"=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~="
 # ==================================================
 _APP_SPECIFIC_NAME="Maxibuild"
-_APP_VERSION="0.2.0"
+_APP_VERSION="0.2.1"
 _APP_STATUS="alpha"
 _APP_INFO="${_APP_SPECIFIC_NAME} is a bash script to manage packages."
 _APP_VERSION_STATUS="${_APP_VERSION}-${_APP_STATUS}"
@@ -168,7 +168,11 @@ to_ordinal() {
 
 maxibuild() {
 
-  local caller required_cmds="${include_packages[*]}" retval
+  local caller required_cmds retval
+
+  # Convert the arguments received from include_packages to array
+  read -ra required_cmds <<<"$include_packages"
+
   ((missing_count = 0))
   caller="$(basename -- "$0")->${FUNCNAME[0]}"
 
@@ -628,6 +632,11 @@ maxibuild() {
         get_status_message "$?"
       elif [[ "${required_cmd}" == +(netstat) ]]; then
         [[ "$(get_distro id)" == +(debian|ubuntu|centos|almalinux|rockylinux) ]] && apt-get -y install net-tools
+
+        command -v "${required_cmd}" &>/dev/null
+        get_status_message "$?"
+      elif [[ "${required_cmd}" == +(puttygen) ]]; then
+        [[ "$(get_distro id)" == +(debian|ubuntu|centos|almalinux|rockylinux) ]] && apt-get -y install putty-tools
 
         command -v "${required_cmd}" &>/dev/null
         get_status_message "$?"
