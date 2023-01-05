@@ -168,8 +168,8 @@ to_ordinal() {
 
 maxibuild() {
 
-  local caller required_cmds="${include_packages[*]}" install_success install_failed retval
-  ((missing_count = install_success = install_failed = 0))
+  local caller required_cmds="${include_packages[*]}" retval
+  ((missing_count = 0))
   caller="$(basename -- "$0")->${FUNCNAME[0]}"
 
   # Loop through the received arguments. Do not quote the array, we want split elements:
@@ -286,11 +286,8 @@ maxibuild() {
           # get_status_message "$?"
           # retval=$?
 
-          if command -v ipcalc >/dev/null; then
-            retval=0
-          else
-            retval=1
-          fi
+          command -v "${required_cmd}" &>/dev/null
+          get_status_message "$?"
         fi
       elif [ "${required_cmd}" == "maxipi" ]; then
         if [[ "$(get_distro id)" == +(debian|ubuntu|centos|almalinux) ]]; then
@@ -333,11 +330,8 @@ maxibuild() {
           #get_status_message "$?"
           #retval=$?
 
-          if command -v maxipi &>/dev/null; then
-            retval=0
-          else
-            retval=1
-          fi
+          command -v "${required_cmd}" &>/dev/null
+          get_status_message "$?"
         fi
       elif [[ "${required_cmd}" == "maxiaide" ]]; then
         if [[ "$(get_distro id)" == +(debian|ubuntu) ]]; then
@@ -401,12 +395,8 @@ maxibuild() {
             get_status_message "$?"
           fi
 
-          if command -v maxiaide &>/dev/null; then
-            retval=0
-          else
-            retval=1
-
-          fi
+          command -v "${required_cmd}" &>/dev/null
+          get_status_message "$?"
 
         fi
       elif [[ "${required_cmd}" == "maxigpg" ]]; then
@@ -460,11 +450,8 @@ maxibuild() {
           #get_status_message "$?"
           #retval=$?
 
-          if command -v maxigpg &>/dev/null; then
-            retval=0
-          else
-            retval=1
-          fi
+          command -v "${required_cmd}" &>/dev/null
+          get_status_message "$?"
 
         fi
       elif [[ "${required_cmd}" == "maxiperm" ]]; then
@@ -519,11 +506,8 @@ maxibuild() {
           # get_status_message "$?"
           # retval=$?
 
-          if command -v perm &>/dev/null; then
-            retval=0
-          else
-            retval=1
-          fi
+          command -v "${required_cmd}" &>/dev/null
+          get_status_message "$?"
         fi
       elif [[ "${required_cmd}" == "maxida" ]]; then
         if [[ "$(get_distro id)" == +(debian|ubuntu) ]]; then
@@ -576,11 +560,9 @@ maxibuild() {
           # maxida --version
           # get_status_message "$?"
           # retval=$?
-          if command -v maxida &>/dev/null; then
-            retval=0
-          else
-            retval=1
-          fi
+
+          command -v "${required_cmd}" &>/dev/null
+          get_status_message "$?"
         fi
       elif [ "${required_cmd}" == "dbxcli" ]; then
         if [[ "$(get_distro id)" == +(debian|ubuntu) ]]; then
@@ -624,53 +606,50 @@ maxibuild() {
           # get_status_message "$?"
           # retval=$?
 
-          if command -v dbxcli &>/dev/null; then
-            retval=0
-          else
-            retval=1
-          fi
+          command -v "${required_cmd}" &>/dev/null
+          get_status_message "$?"
         fi
 
       elif [[ "${required_cmd}" == "ip" ]]; then
         [[ "$(get_distro id)" == +(debian|ubuntu) ]] && apt-get -y install iproute2
-        retval=$?
+
+        command -v "${required_cmd}" &>/dev/null
+        get_status_message "$?"
       elif [[ "${required_cmd}" == "pstree" ]]; then
         [[ "$(get_distro id)" == +(debian|ubuntu|centos|almalinux|rockylinux) ]] && apt-get -y install psmisc
-        retval=$?
+
+        command -v "${required_cmd}" &>/dev/null
+        get_status_message "$?"
       elif [[ "${required_cmd}" == +(dig|nslookup) ]]; then
         [[ "$(get_distro id)" == +(debian|ubuntu) ]] && apt-get -y install dnsutils
         [[ "$(get_distro id)" == +(centos|almalinux|rockylinux) ]] && apt-get -y install bind-utils
-        retval=$?
-       elif [[ "${required_cmd}" == +(netstat) ]]; then
-         [[ "$(get_distro id)" == +(debian|ubuntu|centos|almalinux|rockylinux) ]] && apt-get -y install net-tools
-         retval=$?
+
+        command -v "${required_cmd}" &>/dev/null
+        get_status_message "$?"
+      elif [[ "${required_cmd}" == +(netstat) ]]; then
+        [[ "$(get_distro id)" == +(debian|ubuntu|centos|almalinux|rockylinux) ]] && apt-get -y install net-tools
+
+        command -v "${required_cmd}" &>/dev/null
+        get_status_message "$?"
       else
         # Do normal distro installation
         if [[ "$(get_distro id)" == +(debian|ubuntu) ]]; then
           apt-get -y install "${required_cmd}"
-          retval=$?
+
+          command -v "${required_cmd}" &>/dev/null
+          get_status_message "$?"
         elif [[ "$(get_distro id)" == +(centos|almalinux|rockylinux) ]]; then
           dnf -y install "${required_cmd}"
-          retval=$?
-        fi
-      fi
 
-      if [[ "${retval}" -eq 0 ]]; then
-        ((install_success++))
-      else
-        ((install_failed++))
+          command -v "${required_cmd}" &>/dev/null
+          get_status_message "$?"
+        fi
       fi
 
     fi
 
   done
-  if [ "${install_failed}" -gt 0 ]; then
-    echo ""
-    echo "[${caller}]: Total failed installed: ${install_failed}/${missing_count}"
-    get_status_message 1
-  else
-    return 0
-  fi
+
 }
 
 declare caller force_install include_packages
