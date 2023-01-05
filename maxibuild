@@ -2,7 +2,7 @@
 #"=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~="
 # ==================================================
 _APP_SPECIFIC_NAME="Maxibuild"
-_APP_VERSION="0.1.9"
+_APP_VERSION="0.2.0"
 _APP_STATUS="alpha"
 _APP_INFO="${_APP_SPECIFIC_NAME} is a bash script to manage packages."
 _APP_VERSION_STATUS="${_APP_VERSION}-${_APP_STATUS}"
@@ -631,15 +631,19 @@ maxibuild() {
           fi
         fi
 
-      elif
-        [[ "${required_cmd}" == "ip" ]]
-      then
+      elif [[ "${required_cmd}" == "ip" ]]; then
         [[ "$(get_distro id)" == +(debian|ubuntu) ]] && apt-get -y install iproute2
+        retval=$?
+      elif [[ "${required_cmd}" == "pstree" ]]; then
+        [[ "$(get_distro id)" == +(debian|ubuntu|centos|almalinux|rockylinux) ]] && apt-get -y install psmisc
         retval=$?
       elif [[ "${required_cmd}" == +(dig|nslookup) ]]; then
         [[ "$(get_distro id)" == +(debian|ubuntu) ]] && apt-get -y install dnsutils
         [[ "$(get_distro id)" == +(centos|almalinux|rockylinux) ]] && apt-get -y install bind-utils
         retval=$?
+       elif [[ "${required_cmd}" == +(netstat) ]]; then
+         [[ "$(get_distro id)" == +(debian|ubuntu|centos|almalinux|rockylinux) ]] && apt-get -y install net-tools
+         retval=$?
       else
         # Do normal distro installation
         if [[ "$(get_distro id)" == +(debian|ubuntu) ]]; then
