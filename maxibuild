@@ -290,7 +290,7 @@ maxibuild() {
         # get_status_message "$?"
         # retval=$?
 
-        command -v "${required_cmd}" &>/dev/null
+        command -v "${required_pkg}" &>/dev/null
         get_status_message "$?"
 
       else
