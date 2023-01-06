@@ -221,8 +221,11 @@ maxibuild() {
 
       # Package installation condition here
       if [ "${required_cmd}" == "mail" ]; then
-        [[ "$(get_distro id)" == +(debian|ubuntu) ]] && apt-get -y install bsd-mailx
-        [[ "$(get_distro id)" == +(centos|almalinux|rockylinux) ]] && apt-get -y install bsd-mailx
+        if [[ "$(get_distro id)" == +(debian|ubuntu) ]]; then
+          apt-get -y install bsd-mailx
+        elif [[ "$(get_distro id)" == +(centos|almalinux|rockylinux) ]]; then
+          apt-get -y install mail-utils
+        fi
         get_status_message "$?"
         echo ""
       elif [ "${required_cmd}" == "ipcalc" ]; then
