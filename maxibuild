@@ -2,7 +2,7 @@
 #"=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~="
 # ==================================================
 _APP_SPECIFIC_NAME="Maxibuild"
-_APP_VERSION="0.2.1"
+_APP_VERSION="0.2.2"
 _APP_STATUS="alpha"
 _APP_INFO="${_APP_SPECIFIC_NAME} is a bash script to manage packages."
 _APP_VERSION_STATUS="${_APP_VERSION}-${_APP_STATUS}"
@@ -168,17 +168,69 @@ to_ordinal() {
 
 maxibuild() {
 
-  local caller required_cmds retval
+  local caller required_pkgs required_cmds missing_pkg_count missing_cmd_count
 
-  # Convert the arguments received from include_packages to array
-  read -ra required_cmds <<<"$(echo "${include_packages}" | tr ',' ' ' | tr -d '"')"
-
-  ((missing_count = 0))
   caller="$(basename -- "$0")->${FUNCNAME[0]}"
 
+  ((missing_pkg_count = 0))
+  ((missing_cmd_count = 0))
+
+  # Detect required packages
+  read -ra required_pkgs <<<"$(echo "${include_packages}" | tr ',' ' ' | tr -d '"')"
+
+  for required_pkg in ${required_pkgs[*]}; do
+    local pkg_status retval
+    pkg_status="$(dpkg-query -W --showformat='${db:Status-Status}' "${required_pkg}" 2>&1)"
+    retval="$?"
+
+    if [[ "${force_install}" == "true" ]]; then
+      pkg_status="force_install"
+      retval=1
+    fi
+
+    if [[ "${pkg_status}" != "installed" || "${retval}" -ne 0 ]]; then
+      ((missing_pkg_count++))
+      echo ""
+      if [[ "${force_install}" == "true" ]]; then
+        echo "[${caller}]: Notice, ${required_pkg} will be installed in --force mode"
+      else
+        echo "[${caller}]: Warning, the package ${required_pkg} is missing!"
+      fi
+      echo ""
+
+      if [[ "${missing_pkg_count}" -eq 1 ]]; then
+        echo "[${caller}]: Running system update for the first missing package ..."
+        if [[ "$(get_distro id)" == +(debian|ubuntu) ]]; then
+          apt-get -qq -y update
+        elif [[ "$(get_distro id)" == +(centos|fedora|rhel|almalinux|rocklylinux) ]]; then
+          yum -q -y update
+        fi
+        get_status_message "$?"
+        echo ""
+      fi
+
+      echo "[${caller}]: ${missing_pkg_count}) Installing the $(to_ordinal "${missing_pkg_count}") missing package: ${required_pkg} ..."
+
+      # Add custom package to install here
+      if [ "${required_pkg}" == "custom_package_for_manual_installation" ]; then
+        :
+        get_status_message "$?"
+        echo ""
+      else
+        apt -y install "${required_pkg}"
+        get_status_message "$?"
+        echo ""
+      fi
+    fi
+
+  done
+
+  # Detect required commands
+  # Convert the arguments received from include_packages to array
+  read -ra required_cmds <<<"$(echo "${include_commands}" | tr ',' ' ' | tr -d '"')"
   # Loop through the received arguments. Do not quote the array, we want split elements:
   for required_cmd in ${required_cmds[*]}; do
-
+    local cmd_status retval
     # Using command to obtain installation status
     command -v "${required_cmd}" >/dev/null
     cmd_status="$?"
@@ -186,22 +238,27 @@ maxibuild() {
     [[ "${force_install}" == "true" ]] && cmd_status=1
 
     if [[ "${cmd_status}" -eq 1 ]]; then
-      ((missing_count++))
+      ((missing_cmd_count++))
       echo ""
 
       if [[ "${force_install}" == "true" ]]; then
         echo "[${caller}]: Notice, ${required_cmd} will be installed in --force mode"
       else
-        echo "[${caller}]: Warning, ${required_cmd} is missing!"
+        echo "[${caller}]: Warning, the command ${required_cmd} is missing!"
       fi
       echo ""
 
       # This prevents error if we never run apt-get update when the apt cache is expired
       # When the first missing package is triggered, then we display warning message,
       # and for this first time, we trigger update command to refresh the expired apt cache
-      if [ "${missing_count}" -eq 1 ]; then
-        echo "[${caller}]: Running system update for the first time ..."
-        [[ "$(get_distro id)" == +(debian|ubuntu) ]] && apt-get -qq -y update
+
+      if [[ "${missing_cmd_count}" -eq 1 ]]; then
+        echo "[${caller}]: Running system update for the first missing command ..."
+        if [[ "$(get_distro id)" == +(debian|ubuntu) ]]; then
+          apt-get -qq -y update
+        elif [[ "$(get_distro id)" == +(centos|fedora|rhel|almalinux|rocklylinux) ]]; then
+          yum -q -y update
+        fi
         get_status_message "$?"
         echo ""
 
@@ -210,13 +267,17 @@ maxibuild() {
           echo "[${caller}]: Warning, git is missing!"
           echo ""
           echo "[${caller}]: Installing git ..."
-          [[ "$(get_distro id)" == +(debian|ubuntu) ]] && apt-get -qq -y install git
+          if [[ "$(get_distro id)" == +(debian|ubuntu) ]]; then
+            apt-get -qq -y install git
+          elif [[ "$(get_distro id)" == +(centos|fedora|rhel|almalinux|rocklylinux) ]]; then
+            yum -q -y install git
+          fi
           get_status_message "$?"
           echo ""
         fi
       fi
 
-      echo "[${caller}]: ${missing_count}) Installing the $(to_ordinal "${missing_count}") package: ${required_cmd} ..."
+      echo "[${caller}]: ${missing_cmd_count}) Installing the $(to_ordinal "${missing_cmd_count}") missing command: ${required_cmd} ..."
       echo ""
 
       # Package installation condition here
@@ -648,15 +709,15 @@ maxibuild() {
         # Do normal distro installation
         if [[ "$(get_distro id)" == +(debian|ubuntu) ]]; then
           apt-get -y install "${required_cmd}"
-
           command -v "${required_cmd}" &>/dev/null
-          get_status_message "$?"
+
         elif [[ "$(get_distro id)" == +(centos|almalinux|rockylinux) ]]; then
           dnf -y install "${required_cmd}"
-
           command -v "${required_cmd}" &>/dev/null
-          get_status_message "$?"
+
         fi
+        get_status_message "$?"
+
       fi
 
     fi
@@ -670,6 +731,7 @@ caller="$(basename -- "$0")->${FUNCNAME[0]}"
 
 force_install=false
 include_packages=""
+include_commands=""
 
 # If no argument is supplied we quit
 if [[ $# -eq 0 ]]; then
@@ -701,12 +763,17 @@ while [ "$#" -gt 0 ]; do
     echo "=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~="
     exit $?
     ;;
-  -f | --force-install)
+  # This will force both packages and commands installation
+  -f | --force-install | --force)
     force_install=true
     shift
     ;;
-  -i | -l | -p | --include | --list | --packages)
+  -p | --include-package |  --include-packages | --list-packages | --packages)
     include_packages="$2"
+    shift 2
+    ;;
+  -c | --include-command | --include-commands | --list-commands | --commands)
+    include_commands="$2"
     shift 2
     ;;
   -u | --update | update)
