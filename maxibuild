@@ -168,68 +168,12 @@ to_ordinal() {
 
 maxibuild() {
 
-  local caller required_pkgs required_cmds missing_pkg_count missing_cmd_count
+  local caller required_cmds required_pkgs missing_cmd_count missing_pkg_count
 
   caller="$(basename -- "$0")->${FUNCNAME[0]}"
 
-  ((missing_pkg_count = 0))
   ((missing_cmd_count = 0))
-
-  # Detect required packages
-  read -ra required_pkgs <<<"$(echo "${include_packages}" | tr ',' ' ' | tr -d '"')"
-
-  for required_pkg in ${required_pkgs[*]}; do
-    local pkg_status retval
-    pkg_status="$(dpkg-query -W --showformat='${db:Status-Status}' "${required_pkg}" 2>&1)"
-    retval="$?"
-
-    if [[ "${force_install}" == "true" ]]; then
-      pkg_status="force_install"
-      retval=1
-    fi
-
-    if [[ "${pkg_status}" != "installed" || "${retval}" -ne 0 ]]; then
-      ((missing_pkg_count++))
-      echo ""
-      if [[ "${force_install}" == "true" ]]; then
-        echo "[${caller}]: Notice, ${required_pkg} will be installed in --force mode"
-      else
-        echo "[${caller}]: Warning, the package ${required_pkg} is missing!"
-      fi
-      echo ""
-
-      if [[ "${missing_pkg_count}" -eq 1 ]]; then
-        echo "[${caller}]: Running system update for the first missing package ..."
-        if [[ "$(get_distro id)" == +(debian|ubuntu) ]]; then
-          apt-get -qq -y update
-        elif [[ "$(get_distro id)" == +(centos|fedora|rhel|almalinux|rocklylinux) ]]; then
-          yum -q -y update
-        fi
-        get_status_message "$?"
-        echo ""
-      fi
-
-      echo "[${caller}]: ${missing_pkg_count}) Installing the $(to_ordinal "${missing_pkg_count}") missing package: ${required_pkg} ..."
-
-      # Add custom package to install here
-      if [[ "${required_pkg}" == +(bind-utils|dnsutils) ]]; then
-        if [[ "$(get_distro id)" == +(debian|ubuntu) ]]; then
-          apt-get -y install dnsutils
-        elif
-          [[ "$(get_distro id)" == +(centos|almalinux|rockylinux|rhel) ]]
-        then
-          yum -y install bind-utils
-        fi
-        get_status_message "$?"
-        echo ""
-      else
-        apt -y install "${required_pkg}"
-        get_status_message "$?"
-        echo ""
-      fi
-    fi
-
-  done
+  ((missing_pkg_count = 0))
 
   # Detect required commands
   # Convert the arguments received from include_packages to array
@@ -263,7 +207,7 @@ maxibuild() {
         if [[ "$(get_distro id)" == +(debian|ubuntu) ]]; then
           apt-get -qq -y update
         elif [[ "$(get_distro id)" == +(centos|fedora|rhel|almalinux|rocklylinux) ]]; then
-          yum -q -y update
+          dnf -q -y update
         fi
         get_status_message "$?"
         echo ""
@@ -276,7 +220,7 @@ maxibuild() {
           if [[ "$(get_distro id)" == +(debian|ubuntu) ]]; then
             apt-get -qq -y install git
           elif [[ "$(get_distro id)" == +(centos|fedora|rhel|almalinux|rocklylinux) ]]; then
-            yum -q -y install git
+            dnf -q -y install git
           fi
           get_status_message "$?"
           echo ""
@@ -295,6 +239,14 @@ maxibuild() {
         fi
         get_status_message "$?"
         echo ""
+      elif [[ "${required_cmd}" == +(linode-cli) ]]; then
+
+        if [[ "$(get_distro id)" == +(debian|ubuntu) ]]; then
+          apt-get -y install python3-pip
+        elif [[ "$(get_distro id)" == +(centos|almalinux|rockylinux) ]]; then
+          dnf -y install python3-pip
+        fi
+        pip3 install linode-cli --upgrade
       elif [[ "${required_cmd}" == +(ipcalc) ]]; then
 
         local ipcalc_bin script_install_path
@@ -305,7 +257,7 @@ maxibuild() {
         if [[ "$(get_distro id)" == +(debian|ubuntu) ]]; then
           apt-get -y remove ipcalc
         elif [[ "$(get_distro id)" == +(centos|almalinux|rockylinux) ]]; then
-          yum -y remove ipcalc
+          dnf -y remove ipcalc
         fi
 
         get_status_message "$?"
@@ -702,7 +654,7 @@ maxibuild() {
         get_status_message "$?"
       elif [[ "${required_cmd}" == +(dig|nslookup) ]]; then
         [[ "$(get_distro id)" == +(debian|ubuntu) ]] && apt-get -y install dnsutils
-        [[ "$(get_distro id)" == +(centos|almalinux|rockylinux) ]] && yum -y install bind-utils
+        [[ "$(get_distro id)" == +(centos|almalinux|rockylinux) ]] && dnf -y install bind-utils
 
         command -v "${required_cmd}" &>/dev/null
         get_status_message "$?"
@@ -735,14 +687,83 @@ maxibuild() {
 
   done
 
+  # Detect required packages
+  read -ra required_pkgs <<<"$(echo "${include_packages}" | tr ',' ' ' | tr -d '"')"
+
+  for required_pkg in ${required_pkgs[*]}; do
+    local pkg_status retval
+    pkg_status="$(dpkg-query -W --showformat='${db:Status-Status}' "${required_pkg}" 2>&1)"
+    retval="$?"
+
+    if [[ "${force_install}" == "true" ]]; then
+      pkg_status="force_install"
+      retval=1
+    fi
+
+    if [[ "${pkg_status}" != "installed" || "${retval}" -ne 0 ]]; then
+      ((missing_pkg_count++))
+      echo ""
+      if [[ "${force_install}" == "true" ]]; then
+        echo "[${caller}]: Notice, ${required_pkg} will be installed in --force mode"
+      else
+        echo "[${caller}]: Warning, the package ${required_pkg} is missing!"
+      fi
+      echo ""
+
+      if [[ "${missing_pkg_count}" -eq 1 ]]; then
+        echo "[${caller}]: Running system update for the first missing package ..."
+        if [[ "$(get_distro id)" == +(debian|ubuntu) ]]; then
+          apt-get -qq -y update
+          retval=$?
+        elif [[ "$(get_distro id)" == +(centos|fedora|rhel|almalinux|rocklylinux) ]]; then
+          dnf -q -y update
+          retval=$?
+        fi
+        get_status_message "${retval}"
+        echo ""
+      fi
+
+      echo "[${caller}]: ${missing_pkg_count}) Installing the $(to_ordinal "${missing_pkg_count}") missing package: ${required_pkg} ..."
+      echo "-------"
+      echo ""
+      # Add custom package to install here
+      if [[ "${required_pkg}" == +(bind-utils|dnsutils) ]]; then
+        if [[ "$(get_distro id)" == +(debian|ubuntu) ]]; then
+          apt-get -y install dnsutils
+          retval="$?"
+        elif
+          [[ "$(get_distro id)" == +(centos|almalinux|rockylinux|rhel) ]]
+        then
+          dnf -y install bind-utils
+          retval="$?"
+        fi
+      else
+        if [[ "$(get_distro id)" == +(debian|ubuntu) ]]; then
+          apt-get -y install "${required_pkg}"
+          retval="$?"
+        else
+          dnf -y install "${required_pkg}"
+          retval="$?"
+        fi
+      fi
+
+      get_status_message "${retval}"
+      echo ""
+    else
+      :
+      # echo "[${caller}]: The package ${required_pkg} is installed."
+    fi
+
+  done
+
 }
 
-declare caller force_install include_packages
+declare caller force_install include_commands include_packages
 caller="$(basename -- "$0")->${FUNCNAME[0]}"
 
 force_install=false
-include_packages=""
 include_commands=""
+include_packages=""
 
 # If no argument is supplied we quit
 if [[ $# -eq 0 ]]; then
@@ -779,12 +800,12 @@ while [ "$#" -gt 0 ]; do
     force_install=true
     shift
     ;;
-  -p | --include-package | --include-packages | --list-packages | --packages)
-    include_packages="$2"
-    shift 2
-    ;;
   -c | --include-command | --include-commands | --list-commands | --commands)
     include_commands="$2"
+    shift 2
+    ;;
+  -p | --include-package | --include-packages | --list-packages | --packages)
+    include_packages="$2"
     shift 2
     ;;
   -u | --update | update)
