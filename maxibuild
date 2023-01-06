@@ -2,7 +2,7 @@
 #"=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~="
 # ==================================================
 _APP_SPECIFIC_NAME="Maxibuild"
-_APP_VERSION="0.2.3"
+_APP_VERSION="0.2.4"
 _APP_STATUS="alpha"
 _APP_INFO="${_APP_SPECIFIC_NAME} is a bash script to manage packages."
 _APP_VERSION_STATUS="${_APP_VERSION}-${_APP_STATUS}"
@@ -170,610 +170,606 @@ to_ordinal() {
 
 maxibuild() {
 
-  local caller required_cmds required_pkgs missing_cmd_count missing_pkg_count
+  local caller required_cps missing_count
 
   caller="$(basename -- "$0")->${FUNCNAME[0]}"
 
-  ((missing_cmd_count = 0))
-  ((missing_pkg_count = 0))
+  ((missing_count = 0))
 
-  # Detect required commands
-  # Convert the arguments received from INCLUDE_PACKAGES to array
-  read -ra required_cmds <<<"$(echo "${INCLUDE_COMMANDS}" | tr ',' ' ' | tr -d '"')"
-  # Loop through the received arguments. Do not quote the array, we want split elements:
-  for required_cmd in ${required_cmds[*]}; do
-    local cmd_status retval
-    # Using command to obtain installation status
-    command -v "${required_cmd}" >/dev/null
-    cmd_status="$?"
+  # Detect required packages
+  read -ra required_cps <<<"$(echo "${INCLUDE_CPS}" | tr ',' ' ' | tr -d '"')"
 
-    [[ "${FORCE_INSTALL}" == "true" ]] && cmd_status=1
+  for required_cp in ${required_cps[*]}; do
 
-    if [[ "${cmd_status}" -eq 1 ]]; then
-      ((missing_cmd_count++))
-      echo ""
+    if [[ "${required_cp}" = +(mail|linode-cli|ipcalc|maxipi|maxiaide|maxigpg|maxiperm|maxida|dbxcli|ip|pstree|netstat|puttygen) ]]; then
 
-      if [[ "${FORCE_INSTALL}" == "true" ]]; then
-        echo "[${caller}]: Notice, ${required_cmd} will be installed in --force mode"
-      else
-        echo "[${caller}]: Warning, the command ${required_cmd} is missing!"
-      fi
-      echo ""
+      local cmd_status retval
+      # Using command to obtain installation status
+      command -v "${required_cp}" >/dev/null
+      cmd_status="$?"
 
-      # This prevents error if we never run apt-get update when the apt cache is expired
-      # When the first missing package is triggered, then we display warning message,
-      # and for this first time, we trigger update command to refresh the expired apt cache
+      [[ "${FORCE_INSTALL}" == "true" ]] && cmd_status=1
 
-      if [[ "${missing_cmd_count}" -eq 1 ]]; then
-        echo "[${caller}]: Running system update for the first missing command ..."
-        if [[ "$(get_distro id)" == +(debian|ubuntu) ]]; then
-          apt-get -qq -y update
-        elif [[ "$(get_distro id)" == +(centos|fedora|rhel|almalinux|rocklylinux) ]]; then
-          dnf -q -y update
-        fi
-        get_status_message "$?"
+      if [[ "${cmd_status}" -eq 1 ]]; then
+        ((missing_count++))
         echo ""
 
-        # Check if git is installed (it is necessary)
-        if ! command -v git >/dev/null; then
-          echo "[${caller}]: Warning, git is missing!"
-          echo ""
-          echo "[${caller}]: Installing git ..."
+        if [[ "${FORCE_INSTALL}" == "true" ]]; then
+          echo "[${caller}]: Notice, ${required_cp} will be installed in --force mode"
+        else
+          echo "[${caller}]: Warning, the required command ${required_cp} is missing!"
+        fi
+        echo ""
+
+        # This prevents error if we never run apt-get update when the apt cache is expired
+        # When the first missing package is triggered, then we display warning message,
+        # and for this first time, we trigger update command to refresh the expired apt cache
+
+        if [[ "${missing_count}" -eq 1 ]]; then
+          echo "[${caller}]: Running system update for the first missing command ..."
           if [[ "$(get_distro id)" == +(debian|ubuntu) ]]; then
-            apt-get -qq -y install git
+            apt-get -qq -y update
           elif [[ "$(get_distro id)" == +(centos|fedora|rhel|almalinux|rocklylinux) ]]; then
-            dnf -q -y install git
+            dnf -q -y update
           fi
           get_status_message "$?"
           echo ""
-        fi
-      fi
 
-      echo "[${caller}]: ${missing_cmd_count}) Installing the $(to_ordinal "${missing_cmd_count}") missing command: ${required_cmd} ..."
-      echo ""
-
-      # Package installation condition here
-      if [ "${required_cmd}" == "mail" ]; then
-        if [[ "$(get_distro id)" == +(debian|ubuntu) ]]; then
-          apt-get -y install bsd-mailx
-        elif [[ "$(get_distro id)" == +(centos|almalinux|rockylinux) ]]; then
-          apt-get -y install mail-utils
-        fi
-        get_status_message "$?"
-        echo ""
-      elif [[ "${required_cmd}" == +(linode-cli) ]]; then
-
-        if [[ "$(get_distro id)" == +(debian|ubuntu) ]]; then
-          apt-get -y install python3-pip
-        elif [[ "$(get_distro id)" == +(centos|almalinux|rockylinux) ]]; then
-          dnf -y install python3-pip
-        fi
-        pip3 install linode-cli --upgrade
-      elif [[ "${required_cmd}" == +(ipcalc) ]]; then
-
-        local ipcalc_bin script_install_path
-        script_install_path="/usr/local/opencode/ipcalc"
-        ipcalc_bin="${script_install_path}/build/ipcalc"
-
-        echo "[${caller}]: Removing the old ipcalc installation ..."
-        if [[ "$(get_distro id)" == +(debian|ubuntu) ]]; then
-          apt-get -y remove ipcalc
-        elif [[ "$(get_distro id)" == +(centos|almalinux|rockylinux) ]]; then
-          dnf -y remove ipcalc
+          # Check if git is installed (it is necessary)
+          if ! command -v git >/dev/null; then
+            echo "[${caller}]: Warning, git is missing!"
+            echo ""
+            echo "[${caller}]: Installing git ..."
+            if [[ "$(get_distro id)" == +(debian|ubuntu) ]]; then
+              apt-get -qq -y install git
+            elif [[ "$(get_distro id)" == +(centos|fedora|rhel|almalinux|rocklylinux) ]]; then
+              dnf -q -y install git
+            fi
+            get_status_message "$?"
+            echo ""
+          fi
         fi
 
-        get_status_message "$?"
+        echo "[${caller}]: ${missing_count}) Installing the $(to_ordinal "${missing_count}") missing command: ${required_cp} ..."
         echo ""
 
-        echo "[${caller}]: Removing the old ipcalc directory"
-        rm -rf "${script_install_path}" /usr/local/bin/ipcalc /usr/bin/ipcalc
-        get_status_message "$?"
-        echo ""
+        # Package installation condition here
+        if [[ "${required_cp}" == +(mail) ]]; then
+          if [[ "$(get_distro id)" == +(debian|ubuntu) ]]; then
+            apt-get -y install bsd-mailx
+          elif [[ "$(get_distro id)" == +(centos|almalinux|rockylinux) ]]; then
+            apt-get -y install mail-utils
+          fi
+          get_status_message "$?"
+          echo ""
+        elif [[ "${required_cp}" == +(linode-cli) ]]; then
 
-        echo "[${caller}]: Install required packages to build ipcalc ..."
-        apt-get -y install git gcc meson
-        get_status_message "$?"
-        echo ""
+          if [[ "$(get_distro id)" == +(debian|ubuntu) ]]; then
+            apt-get -y install python3-pip
+          elif [[ "$(get_distro id)" == +(centos|almalinux|rockylinux) ]]; then
+            dnf -y install python3-pip
+          fi
+          pip3 install linode-cli --upgrade
+        elif [[ "${required_cp}" == +(ipcalc) ]]; then
 
-        echo "[${caller}]: Creating an installation directory for ipcalc ..."
-        mkdir -p "${script_install_path}"
-        get_status_message "$?"
-        echo ""
+          local ipcalc_bin script_install_path
+          script_install_path="/usr/local/opencode/ipcalc"
+          ipcalc_bin="${script_install_path}/build/ipcalc"
 
-        echo "[${caller}]: Cloning the ipcalc repository ..."
-        git clone https://github.com/sofibox/ipcalc.git "${script_install_path}"
-        get_status_message "$?"
-        echo ""
+          echo "[${caller}]: Removing the old ipcalc installation ..."
+          if [[ "$(get_distro id)" == +(debian|ubuntu) ]]; then
+            apt-get -y remove ipcalc
+          elif [[ "$(get_distro id)" == +(centos|almalinux|rockylinux) ]]; then
+            dnf -y remove ipcalc
+          fi
 
-        # Change directory to script_install_path, if failed then exit with a message
-        cd "${script_install_path}" || {
-          echo "Failed to change directory to ${script_install_path}"
-          exit 1
-        }
-
-        echo "[${caller}]: Configuring ipcalc build type ..."
-        meson setup build --buildtype=release
-        get_status_message "$?"
-        echo ""
-
-        echo "[${caller}]: Building ipcalc ..."
-        ninja -C build
-        get_status_message "$?"
-        echo ""
-
-        echo "[${caller}]: Giving execution permission to the ipcalc installation script ..."
-        chmod +x ${ipcalc_bin}
-        get_status_message "$?"
-        echo ""
-
-        echo "[${caller}]: Creating a symbolic link to the ipcalc installation script ..."
-        ln -s ${ipcalc_bin} /usr/local/bin
-        get_status_message "$?"
-        echo ""
-
-        #echo "[${caller}]: Copying sample config file ..."
-        #cp "${script_install_path}/ipcalc.conf.sample" "${script_install_path}/ipcalc.conf"
-        #echo ""
-
-        # echo "[${caller}]: Running ipcalc --version  ..."
-        # ipcalc --version
-        # get_status_message "$?"
-        # retval=$?
-
-        command -v "${required_cmd}" &>/dev/null
-        get_status_message "$?"
-
-      elif [ "${required_cmd}" == "maxipi" ]; then
-        if [[ "$(get_distro id)" == +(debian|ubuntu|centos|almalinux) ]]; then
-          local maxipi_bin script_install_path
-          script_install_path="/usr/local/maxicode/maxipi"
-          maxipi_bin="${script_install_path}/maxipi"
-
-          echo "[${caller}]: Removing the old maxipi directory"
-          rm -rf "${script_install_path}" /usr/local/bin/maxipi /usr/bin/maxipi
           get_status_message "$?"
           echo ""
 
-          echo "[${caller}]: Install required packages to build maxipi ..."
-          apt-get -y install gcc meson
+          echo "[${caller}]: Removing the old ipcalc directory"
+          rm -rf "${script_install_path}" /usr/local/bin/ipcalc /usr/bin/ipcalc
           get_status_message "$?"
           echo ""
 
-          echo "[${caller}]: Creating an installation directory for maxipi ..."
+          echo "[${caller}]: Install required packages to build ipcalc ..."
+          apt-get -y install git gcc meson
+          get_status_message "$?"
+          echo ""
+
+          echo "[${caller}]: Creating an installation directory for ipcalc ..."
           mkdir -p "${script_install_path}"
           get_status_message "$?"
           echo ""
 
-          echo "[${caller}]: Cloning the maxipi repository ..."
-          git clone https://github.com/sofibox/maxipi_public.git "${script_install_path}"
+          echo "[${caller}]: Cloning the ipcalc repository ..."
+          git clone https://github.com/sofibox/ipcalc.git "${script_install_path}"
           get_status_message "$?"
           echo ""
 
-          echo "[${caller}]: Giving execution permission to the maxipi installation script ..."
-          chmod +x ${maxipi_bin}
+          # Change directory to script_install_path, if failed then exit with a message
+          cd "${script_install_path}" || {
+            echo "Failed to change directory to ${script_install_path}"
+            exit 1
+          }
+
+          echo "[${caller}]: Configuring ipcalc build type ..."
+          meson setup build --buildtype=release
           get_status_message "$?"
           echo ""
 
-          echo "[${caller}]: Creating a symbolic link to the maxipi installation script ..."
-          ln -s ${maxipi_bin} /usr/local/bin
+          echo "[${caller}]: Building ipcalc ..."
+          ninja -C build
           get_status_message "$?"
           echo ""
 
-          #echo "[${caller}]: Running maxipi --version  ..."
-          #maxipi --version
-          #get_status_message "$?"
-          #retval=$?
-
-          command -v "${required_cmd}" &>/dev/null
-          get_status_message "$?"
-        fi
-      elif [[ "${required_cmd}" == "maxiaide" ]]; then
-        if [[ "$(get_distro id)" == +(debian|ubuntu) ]]; then
-          local maxiaide_bin script_install_path
-          script_install_path="/usr/local/maxicode/maxiaide"
-          maxiaide_bin="${script_install_path}/maxiaide"
-
-          echo "[${caller}]: Removing aide aide-common..."
-
-          apt-get -y remove aide aide-common
+          echo "[${caller}]: Giving execution permission to the ipcalc installation script ..."
+          chmod +x ${ipcalc_bin}
           get_status_message "$?"
           echo ""
 
-          echo "[${caller}]: Purging aide aide-common..."
-          apt-get -y purge aide-common
+          echo "[${caller}]: Creating a symbolic link to the ipcalc installation script ..."
+          ln -s ${ipcalc_bin} /usr/local/bin
           get_status_message "$?"
           echo ""
 
-          echo "[${caller}]: Removing the old maxiaide directory"
-          rm -rf "${script_install_path}" /usr/local/bin/maxiaide /usr/bin/maxiaide
+          #echo "[${caller}]: Copying sample config file ..."
+          #cp "${script_install_path}/ipcalc.conf.sample" "${script_install_path}/ipcalc.conf"
+          #echo ""
 
-          echo "[${caller}]: Install maxiaide required packages ..."
-          apt-get -y install aide
+          # echo "[${caller}]: Running ipcalc --version  ..."
+          # ipcalc --version
+          # get_status_message "$?"
+          # retval=$?
+
+          command -v "${required_cp}" &>/dev/null
           get_status_message "$?"
-          echo ""
 
-          echo "[${caller}]: Creating an installation directory for maxiaide ..."
-          mkdir -p "${script_install_path}"
-          get_status_message "$?"
-          echo ""
+        elif [ "${required_cp}" == "maxipi" ]; then
+          if [[ "$(get_distro id)" == +(debian|ubuntu|centos|almalinux) ]]; then
+            local maxipi_bin script_install_path
+            script_install_path="/usr/local/maxicode/maxipi"
+            maxipi_bin="${script_install_path}/maxipi"
 
-          echo "[${caller}]: Cloning the maxiaide repository ..."
-          git clone https://github.com/sofibox/maxiaide_public.git "${script_install_path}"
-          get_status_message "$?"
-          echo ""
+            echo "[${caller}]: Removing the old maxipi directory"
+            rm -rf "${script_install_path}" /usr/local/bin/maxipi /usr/bin/maxipi
+            get_status_message "$?"
+            echo ""
 
-          echo "[${caller}]: Giving execution permission to the maxiaide installation script ..."
-          chmod +x ${maxiaide_bin}
-          get_status_message "$?"
-          echo ""
+            echo "[${caller}]: Install required packages to build maxipi ..."
+            apt-get -y install gcc meson
+            get_status_message "$?"
+            echo ""
 
-          echo "[${caller}]: Creating a symbolic link to the maxiaide installation script ..."
-          ln -s ${maxiaide_bin} /usr/local/bin
-          get_status_message "$?"
-          echo ""
+            echo "[${caller}]: Creating an installation directory for maxipi ..."
+            mkdir -p "${script_install_path}"
+            get_status_message "$?"
+            echo ""
 
-          echo "[${caller}]: Copying sample config file ..."
-          cp "${script_install_path}/maxiaide.conf.sample" "${script_install_path}/maxiaide.conf"
-          get_status_message "$?"
-          echo ""
+            echo "[${caller}]: Cloning the maxipi repository ..."
+            git clone https://github.com/sofibox/maxipi_public.git "${script_install_path}"
+            get_status_message "$?"
+            echo ""
 
-          #echo "[${caller}]: Running maxiaide --version  ..."
-          #maxiaide --version
-          #get_status_message "$?"
-          #retval=$?
+            echo "[${caller}]: Giving execution permission to the maxipi installation script ..."
+            chmod +x ${maxipi_bin}
+            get_status_message "$?"
+            echo ""
 
-          # Extra steps for Debian
-          if [ -f /etc/cron.daily/aide ]; then
-            echo "[${caller}]: Removing /etc/cron.daily/aide ..."
-            rm -fv /etc/cron.daily/aide
+            echo "[${caller}]: Creating a symbolic link to the maxipi installation script ..."
+            ln -s ${maxipi_bin} /usr/local/bin
+            get_status_message "$?"
+            echo ""
+
+            #echo "[${caller}]: Running maxipi --version  ..."
+            #maxipi --version
+            #get_status_message "$?"
+            #retval=$?
+
+            command -v "${required_cp}" &>/dev/null
+            get_status_message "$?"
+          fi
+        elif [[ "${required_cp}" == "maxiaide" ]]; then
+          if [[ "$(get_distro id)" == +(debian|ubuntu) ]]; then
+            local maxiaide_bin script_install_path
+            script_install_path="/usr/local/maxicode/maxiaide"
+            maxiaide_bin="${script_install_path}/maxiaide"
+
+            echo "[${caller}]: Removing aide aide-common..."
+
+            apt-get -y remove aide aide-common
+            get_status_message "$?"
+            echo ""
+
+            echo "[${caller}]: Purging aide aide-common..."
+            apt-get -y purge aide-common
+            get_status_message "$?"
+            echo ""
+
+            echo "[${caller}]: Removing the old maxiaide directory"
+            rm -rf "${script_install_path}" /usr/local/bin/maxiaide /usr/bin/maxiaide
+
+            echo "[${caller}]: Install maxiaide required packages ..."
+            apt-get -y install aide
+            get_status_message "$?"
+            echo ""
+
+            echo "[${caller}]: Creating an installation directory for maxiaide ..."
+            mkdir -p "${script_install_path}"
+            get_status_message "$?"
+            echo ""
+
+            echo "[${caller}]: Cloning the maxiaide repository ..."
+            git clone https://github.com/sofibox/maxiaide_public.git "${script_install_path}"
+            get_status_message "$?"
+            echo ""
+
+            echo "[${caller}]: Giving execution permission to the maxiaide installation script ..."
+            chmod +x ${maxiaide_bin}
+            get_status_message "$?"
+            echo ""
+
+            echo "[${caller}]: Creating a symbolic link to the maxiaide installation script ..."
+            ln -s ${maxiaide_bin} /usr/local/bin
+            get_status_message "$?"
+            echo ""
+
+            echo "[${caller}]: Copying sample config file ..."
+            cp "${script_install_path}/maxiaide.conf.sample" "${script_install_path}/maxiaide.conf"
+            get_status_message "$?"
+            echo ""
+
+            #echo "[${caller}]: Running maxiaide --version  ..."
+            #maxiaide --version
+            #get_status_message "$?"
+            #retval=$?
+
+            # Extra steps for Debian
+            if [ -f /etc/cron.daily/aide ]; then
+              echo "[${caller}]: Removing /etc/cron.daily/aide ..."
+              rm -fv /etc/cron.daily/aide
+              get_status_message "$?"
+            fi
+
+            command -v "${required_cp}" &>/dev/null
+            get_status_message "$?"
+
+          fi
+        elif [[ "${required_cp}" == "maxigpg" ]]; then
+          if [[ "$(get_distro id)" == +(debian|ubuntu) ]]; then
+            local maxigpg_bin script_install_path
+            script_install_path="/usr/local/maxicode/maxigpg"
+            maxigpg_bin="${script_install_path}/maxigpg"
+
+            echo "[${caller}]: Removing GPG ..."
+            apt-get -y remove gpg
+            get_status_message "$?"
+            echo ""
+
+            echo "[${caller}]: Removing the old maxigpg directory"
+            rm -rf "${script_install_path}" /usr/local/bin/maxigpg /usr/bin/maxigpg
+            get_status_message "$?"
+            echo ""
+
+            echo "[${caller}]: Install maxigpg required packages ..."
+            apt-get -y install gpg
+            get_status_message "$?"
+            echo ""
+
+            echo "[${caller}]: Creating an installation directory for maxigpg ..."
+            mkdir -p "${script_install_path}"
+            get_status_message "$?"
+            echo ""
+
+            echo "[${caller}]: Cloning the maxigpg repository ..."
+            git clone https://github.com/sofibox/maxigpg_public.git "${script_install_path}"
+            get_status_message "$?"
+            echo ""
+
+            echo "[${caller}]: Giving execution permission to the maxigpg installation script ..."
+            chmod +x ${maxigpg_bin}
+            get_status_message "$?"
+            echo ""
+
+            echo "[${caller}]: Creating a symbolic link to the maxigpg installation script ..."
+            ln -s ${maxigpg_bin} /usr/local/bin
+            get_status_message "$?"
+            echo ""
+
+            echo "[${caller}]: Copying sample config file ..."
+            cp "${script_install_path}/maxigpg.conf.sample" "${script_install_path}/maxigpg.conf"
+            get_status_message "$?"
+            echo ""
+
+            #echo "[${caller}]: Running maxigpg --version  ..."
+            #maxigpg --version
+            #get_status_message "$?"
+            #retval=$?
+
+            command -v "${required_cp}" &>/dev/null
+            get_status_message "$?"
+
+          fi
+        elif [[ "${required_cp}" == "maxiperm" ]]; then
+          if [[ "$(get_distro id)" == +(debian|ubuntu) ]]; then
+            local maxiperm_bin perm_bin script_install_path
+            script_install_path="/usr/local/maxicode/maxiperm"
+            maxiperm_bin="${script_install_path}/maxiperm"
+            perm_bin="${script_install_path}/perm"
+
+            echo "[${caller}]: Removing the old maxiperm directory"
+            rm -rf "${script_install_path}" /usr/local/bin/maxiperm /usr/bin/maxiperm /usr/local/bin/perm /usr/bin/perm
+            get_status_message "$?"
+            echo ""
+
+            echo "[${caller}]: Creating an installation directory for maxiperm ..."
+            mkdir -p "${script_install_path}"
+            get_status_message "$?"
+            echo ""
+
+            echo "[${caller}]: Cloning the maxiperm repository ..."
+            git clone https://github.com/sofibox/maxiperm_public.git "${script_install_path}"
+            get_status_message "$?"
+            echo ""
+
+            echo "[${caller}]: Giving execution permission to the maxiperm installation script ..."
+            chmod +x ${maxiperm_bin}
+            get_status_message "$?"
+            echo ""
+
+            echo "[${caller}]: Creating a symbolic link to the maxiperm installation script ..."
+            ln -s ${maxiperm_bin} /usr/local/bin
+            get_status_message "$?"
+            echo ""
+
+            echo "[${caller}]: Giving execution permission to the perm installation script ..."
+            chmod +x ${perm_bin}
+            get_status_message "$?"
+            echo ""
+
+            echo "[${caller}]: Creating a symbolic link to the perm installation script ..."
+            ln -s ${perm_bin} /usr/local/bin
+            get_status_message "$?"
+            echo ""
+
+            echo "[${caller}]: Copying sample config file ..."
+            cp "${script_install_path}/maxiperm.conf.sample" "${script_install_path}/maxiperm.conf"
+            get_status_message "$?"
+            echo ""
+
+            # echo "[${caller}]: Running maxiperm --version  ..."
+            # maxiperm --version
+            # get_status_message "$?"
+            # retval=$?
+
+            command -v "${required_cp}" &>/dev/null
+            get_status_message "$?"
+          fi
+        elif [[ "${required_cp}" == "maxida" ]]; then
+          if [[ "$(get_distro id)" == +(debian|ubuntu) ]]; then
+            local maxida_bin dacli_bin script_install_path
+            script_install_path="/usr/local/maxicode/maxida"
+            maxida_bin="${script_install_path}/maxida"
+            dacli_bin="${script_install_path}/dacli"
+
+            echo "[${caller}]: Removing the old maxida directory"
+            rm -rf "${script_install_path}" /usr/local/bin/maxida /usr/bin/maxida /usr/local/bin/dacli /usr/bin/dacli
+            get_status_message "$?"
+            echo ""
+
+            echo "[${caller}]: Creating an installation directory for maxida ..."
+            mkdir -p "${script_install_path}"
+            get_status_message "$?"
+            echo ""
+
+            echo "[${caller}]: Cloning the maxida repository ..."
+            git clone https://github.com/sofibox/maxida_public.git "${script_install_path}"
+            get_status_message "$?"
+            echo ""
+
+            echo "[${caller}]: Giving execution permission to the maxida installation script ..."
+            chmod +x ${maxida_bin}
+            get_status_message "$?"
+            echo ""
+
+            echo "[${caller}]: Creating a symbolic link to the maxida installation script ..."
+            ln -s ${maxida_bin} /usr/local/bin
+            get_status_message "$?"
+            echo ""
+
+            echo "[${caller}]: Giving execution permission to the dacli installation script ..."
+            chmod +x ${dacli_bin}
+            get_status_message "$?"
+            echo ""
+
+            echo "[${caller}]: Creating a symbolic link to the dacli installation script ..."
+            ln -s ${dacli_bin} /usr/local/bin
+            get_status_message "$?"
+            echo ""
+
+            echo "[${caller}]: Copying sample config file ..."
+            cp "${script_install_path}/maxida.conf.sample" "${script_install_path}/maxida.conf"
+            get_status_message "$?"
+            echo ""
+
+            # echo "[${caller}]: Running maxida --version  ..."
+            # maxida --version
+            # get_status_message "$?"
+            # retval=$?
+
+            command -v "${required_cp}" &>/dev/null
+            get_status_message "$?"
+          fi
+        elif [ "${required_cp}" == "dbxcli" ]; then
+          if [[ "$(get_distro id)" == +(debian|ubuntu) ]]; then
+            local dbxcli_bin script_install_path
+            script_install_path="/usr/local/opencode/dbxcli"
+            dbxcli_bin="${script_install_path}/dbxcli"
+            dropbox_uploader_bin="${script_install_path}/dropbox_uploader.sh"
+
+            echo "[${caller}]: Removing the old dbxcli directory"
+            rm -rf "${script_install_path}" /usr/local/bin/dbxcli /usr/bin/dbxcli
+            get_status_message "$?"
+            echo ""
+
+            echo "[${caller}]: Creating an installation directory for dbxcli ..."
+            mkdir -p "${script_install_path}"
+            get_status_message "$?"
+            echo ""
+
+            echo "[${caller}]: Cloning the dbxcli repository ..."
+            git clone https://github.com/sofibox/dbxcli.git "${script_install_path}"
+            get_status_message "$?"
+            echo ""
+
+            echo "[${caller}]: Giving execution permission to the ${dropbox_uploader_bin} installation script ..."
+            chmod +x "${dropbox_uploader_bin}"
+            get_status_message "$?"
+            echo ""
+
+            echo "[${caller}]: Giving execution permission to the dbxcli installation script ..."
+            chmod +x "${dbxcli_bin}"
+            get_status_message "$?"
+            echo ""
+
+            echo "[${caller}]: Creating a symbolic link to the dbxcli installation script ..."
+            ln -s "${dbxcli_bin}" /usr/local/bin
+            get_status_message "$?"
+            echo ""
+
+            # echo "[${caller}]: Running dbxcli version  ..."
+            # dbxcli version
+            # get_status_message "$?"
+            # retval=$?
+
+            command -v "${required_cp}" &>/dev/null
             get_status_message "$?"
           fi
 
-          command -v "${required_cmd}" &>/dev/null
+        elif [[ "${required_cp}" == "ip" ]]; then
+          [[ "$(get_distro id)" == +(debian|ubuntu) ]] && apt-get -y install iproute2
+
+          command -v "${required_cp}" &>/dev/null
+          get_status_message "$?"
+        elif [[ "${required_cp}" == "pstree" ]]; then
+          [[ "$(get_distro id)" == +(debian|ubuntu|centos|almalinux|rockylinux) ]] && apt-get -y install psmisc
+
+          command -v "${required_cp}" &>/dev/null
+          get_status_message "$?"
+        elif [[ "${required_cp}" == +(dig|nslookup) ]]; then
+          [[ "$(get_distro id)" == +(debian|ubuntu) ]] && apt-get -y install dnsutils
+          [[ "$(get_distro id)" == +(centos|almalinux|rockylinux) ]] && dnf -y install bind-utils
+
+          command -v "${required_cp}" &>/dev/null
+          get_status_message "$?"
+        elif [[ "${required_cp}" == +(netstat) ]]; then
+          [[ "$(get_distro id)" == +(debian|ubuntu|centos|almalinux|rockylinux) ]] && apt-get -y install net-tools
+
+          command -v "${required_cp}" &>/dev/null
+          get_status_message "$?"
+        elif [[ "${required_cp}" == +(puttygen) ]]; then
+          [[ "$(get_distro id)" == +(debian|ubuntu|centos|almalinux|rockylinux) ]] && apt-get -y install putty-tools
+
+          command -v "${required_cp}" &>/dev/null
+          get_status_message "$?"
+        else
+          # Do normal distro installation
+          if [[ "$(get_distro id)" == +(debian|ubuntu) ]]; then
+            apt-get -y install "${required_cp}"
+            command -v "${required_cp}" &>/dev/null
+
+          elif [[ "$(get_distro id)" == +(centos|almalinux|rockylinux) ]]; then
+            dnf -y install "${required_cp}"
+            command -v "${required_cp}" &>/dev/null
+
+          fi
           get_status_message "$?"
 
         fi
-      elif [[ "${required_cmd}" == "maxigpg" ]]; then
-        if [[ "$(get_distro id)" == +(debian|ubuntu) ]]; then
-          local maxigpg_bin script_install_path
-          script_install_path="/usr/local/maxicode/maxigpg"
-          maxigpg_bin="${script_install_path}/maxigpg"
-
-          echo "[${caller}]: Removing GPG ..."
-          apt-get -y remove gpg
-          get_status_message "$?"
-          echo ""
-
-          echo "[${caller}]: Removing the old maxigpg directory"
-          rm -rf "${script_install_path}" /usr/local/bin/maxigpg /usr/bin/maxigpg
-          get_status_message "$?"
-          echo ""
-
-          echo "[${caller}]: Install maxigpg required packages ..."
-          apt-get -y install gpg
-          get_status_message "$?"
-          echo ""
-
-          echo "[${caller}]: Creating an installation directory for maxigpg ..."
-          mkdir -p "${script_install_path}"
-          get_status_message "$?"
-          echo ""
-
-          echo "[${caller}]: Cloning the maxigpg repository ..."
-          git clone https://github.com/sofibox/maxigpg_public.git "${script_install_path}"
-          get_status_message "$?"
-          echo ""
-
-          echo "[${caller}]: Giving execution permission to the maxigpg installation script ..."
-          chmod +x ${maxigpg_bin}
-          get_status_message "$?"
-          echo ""
-
-          echo "[${caller}]: Creating a symbolic link to the maxigpg installation script ..."
-          ln -s ${maxigpg_bin} /usr/local/bin
-          get_status_message "$?"
-          echo ""
-
-          echo "[${caller}]: Copying sample config file ..."
-          cp "${script_install_path}/maxigpg.conf.sample" "${script_install_path}/maxigpg.conf"
-          get_status_message "$?"
-          echo ""
-
-          #echo "[${caller}]: Running maxigpg --version  ..."
-          #maxigpg --version
-          #get_status_message "$?"
-          #retval=$?
-
-          command -v "${required_cmd}" &>/dev/null
-          get_status_message "$?"
-
-        fi
-      elif [[ "${required_cmd}" == "maxiperm" ]]; then
-        if [[ "$(get_distro id)" == +(debian|ubuntu) ]]; then
-          local maxiperm_bin perm_bin script_install_path
-          script_install_path="/usr/local/maxicode/maxiperm"
-          maxiperm_bin="${script_install_path}/maxiperm"
-          perm_bin="${script_install_path}/perm"
-
-          echo "[${caller}]: Removing the old maxiperm directory"
-          rm -rf "${script_install_path}" /usr/local/bin/maxiperm /usr/bin/maxiperm /usr/local/bin/perm /usr/bin/perm
-          get_status_message "$?"
-          echo ""
-
-          echo "[${caller}]: Creating an installation directory for maxiperm ..."
-          mkdir -p "${script_install_path}"
-          get_status_message "$?"
-          echo ""
-
-          echo "[${caller}]: Cloning the maxiperm repository ..."
-          git clone https://github.com/sofibox/maxiperm_public.git "${script_install_path}"
-          get_status_message "$?"
-          echo ""
-
-          echo "[${caller}]: Giving execution permission to the maxiperm installation script ..."
-          chmod +x ${maxiperm_bin}
-          get_status_message "$?"
-          echo ""
-
-          echo "[${caller}]: Creating a symbolic link to the maxiperm installation script ..."
-          ln -s ${maxiperm_bin} /usr/local/bin
-          get_status_message "$?"
-          echo ""
-
-          echo "[${caller}]: Giving execution permission to the perm installation script ..."
-          chmod +x ${perm_bin}
-          get_status_message "$?"
-          echo ""
-
-          echo "[${caller}]: Creating a symbolic link to the perm installation script ..."
-          ln -s ${perm_bin} /usr/local/bin
-          get_status_message "$?"
-          echo ""
-
-          echo "[${caller}]: Copying sample config file ..."
-          cp "${script_install_path}/maxiperm.conf.sample" "${script_install_path}/maxiperm.conf"
-          get_status_message "$?"
-          echo ""
-
-          # echo "[${caller}]: Running maxiperm --version  ..."
-          # maxiperm --version
-          # get_status_message "$?"
-          # retval=$?
-
-          command -v "${required_cmd}" &>/dev/null
-          get_status_message "$?"
-        fi
-      elif [[ "${required_cmd}" == "maxida" ]]; then
-        if [[ "$(get_distro id)" == +(debian|ubuntu) ]]; then
-          local maxida_bin dacli_bin script_install_path
-          script_install_path="/usr/local/maxicode/maxida"
-          maxida_bin="${script_install_path}/maxida"
-          dacli_bin="${script_install_path}/dacli"
-
-          echo "[${caller}]: Removing the old maxida directory"
-          rm -rf "${script_install_path}" /usr/local/bin/maxida /usr/bin/maxida /usr/local/bin/dacli /usr/bin/dacli
-          get_status_message "$?"
-          echo ""
-
-          echo "[${caller}]: Creating an installation directory for maxida ..."
-          mkdir -p "${script_install_path}"
-          get_status_message "$?"
-          echo ""
-
-          echo "[${caller}]: Cloning the maxida repository ..."
-          git clone https://github.com/sofibox/maxida_public.git "${script_install_path}"
-          get_status_message "$?"
-          echo ""
-
-          echo "[${caller}]: Giving execution permission to the maxida installation script ..."
-          chmod +x ${maxida_bin}
-          get_status_message "$?"
-          echo ""
-
-          echo "[${caller}]: Creating a symbolic link to the maxida installation script ..."
-          ln -s ${maxida_bin} /usr/local/bin
-          get_status_message "$?"
-          echo ""
-
-          echo "[${caller}]: Giving execution permission to the dacli installation script ..."
-          chmod +x ${dacli_bin}
-          get_status_message "$?"
-          echo ""
-
-          echo "[${caller}]: Creating a symbolic link to the dacli installation script ..."
-          ln -s ${dacli_bin} /usr/local/bin
-          get_status_message "$?"
-          echo ""
-
-          echo "[${caller}]: Copying sample config file ..."
-          cp "${script_install_path}/maxida.conf.sample" "${script_install_path}/maxida.conf"
-          get_status_message "$?"
-          echo ""
-
-          # echo "[${caller}]: Running maxida --version  ..."
-          # maxida --version
-          # get_status_message "$?"
-          # retval=$?
-
-          command -v "${required_cmd}" &>/dev/null
-          get_status_message "$?"
-        fi
-      elif [ "${required_cmd}" == "dbxcli" ]; then
-        if [[ "$(get_distro id)" == +(debian|ubuntu) ]]; then
-          local dbxcli_bin script_install_path
-          script_install_path="/usr/local/opencode/dbxcli"
-          dbxcli_bin="${script_install_path}/dbxcli"
-          dropbox_uploader_bin="${script_install_path}/dropbox_uploader.sh"
-
-          echo "[${caller}]: Removing the old dbxcli directory"
-          rm -rf "${script_install_path}" /usr/local/bin/dbxcli /usr/bin/dbxcli
-          get_status_message "$?"
-          echo ""
-
-          echo "[${caller}]: Creating an installation directory for dbxcli ..."
-          mkdir -p "${script_install_path}"
-          get_status_message "$?"
-          echo ""
-
-          echo "[${caller}]: Cloning the dbxcli repository ..."
-          git clone https://github.com/sofibox/dbxcli.git "${script_install_path}"
-          get_status_message "$?"
-          echo ""
-
-          echo "[${caller}]: Giving execution permission to the ${dropbox_uploader_bin} installation script ..."
-          chmod +x "${dropbox_uploader_bin}"
-          get_status_message "$?"
-          echo ""
-
-          echo "[${caller}]: Giving execution permission to the dbxcli installation script ..."
-          chmod +x "${dbxcli_bin}"
-          get_status_message "$?"
-          echo ""
-
-          echo "[${caller}]: Creating a symbolic link to the dbxcli installation script ..."
-          ln -s "${dbxcli_bin}" /usr/local/bin
-          get_status_message "$?"
-          echo ""
-
-          # echo "[${caller}]: Running dbxcli version  ..."
-          # dbxcli version
-          # get_status_message "$?"
-          # retval=$?
-
-          command -v "${required_cmd}" &>/dev/null
-          get_status_message "$?"
-        fi
-
-      elif [[ "${required_cmd}" == "ip" ]]; then
-        [[ "$(get_distro id)" == +(debian|ubuntu) ]] && apt-get -y install iproute2
-
-        command -v "${required_cmd}" &>/dev/null
-        get_status_message "$?"
-      elif [[ "${required_cmd}" == "pstree" ]]; then
-        [[ "$(get_distro id)" == +(debian|ubuntu|centos|almalinux|rockylinux) ]] && apt-get -y install psmisc
-
-        command -v "${required_cmd}" &>/dev/null
-        get_status_message "$?"
-      elif [[ "${required_cmd}" == +(dig|nslookup) ]]; then
-        [[ "$(get_distro id)" == +(debian|ubuntu) ]] && apt-get -y install dnsutils
-        [[ "$(get_distro id)" == +(centos|almalinux|rockylinux) ]] && dnf -y install bind-utils
-
-        command -v "${required_cmd}" &>/dev/null
-        get_status_message "$?"
-      elif [[ "${required_cmd}" == +(netstat) ]]; then
-        [[ "$(get_distro id)" == +(debian|ubuntu|centos|almalinux|rockylinux) ]] && apt-get -y install net-tools
-
-        command -v "${required_cmd}" &>/dev/null
-        get_status_message "$?"
-      elif [[ "${required_cmd}" == +(puttygen) ]]; then
-        [[ "$(get_distro id)" == +(debian|ubuntu|centos|almalinux|rockylinux) ]] && apt-get -y install putty-tools
-
-        command -v "${required_cmd}" &>/dev/null
-        get_status_message "$?"
-      else
-        # Do normal distro installation
-        if [[ "$(get_distro id)" == +(debian|ubuntu) ]]; then
-          apt-get -y install "${required_cmd}"
-          command -v "${required_cmd}" &>/dev/null
-
-        elif [[ "$(get_distro id)" == +(centos|almalinux|rockylinux) ]]; then
-          dnf -y install "${required_cmd}"
-          command -v "${required_cmd}" &>/dev/null
-
-        fi
-        get_status_message "$?"
 
       fi
 
-    fi
+    else
 
-  done
+      local pkg_status retval
+      pkg_status="$(dpkg-query -W --showformat='${db:Status-Status}' "${required_cp}" 2>&1)"
+      retval="$?"
 
-  # Detect required packages
-  read -ra required_pkgs <<<"$(echo "${INCLUDE_PACKAGES}" | tr ',' ' ' | tr -d '"')"
-
-  for required_pkg in ${required_pkgs[*]}; do
-    local pkg_status retval
-    pkg_status="$(dpkg-query -W --showformat='${db:Status-Status}' "${required_pkg}" 2>&1)"
-    retval="$?"
-
-    if [[ "${FORCE_INSTALL}" == "true" ]]; then
-      pkg_status="FORCE_INSTALL"
-      retval=1
-    fi
-
-    if [[ "${pkg_status}" != "installed" || "${retval}" -ne 0 ]]; then
-      ((missing_pkg_count++))
-      echo ""
       if [[ "${FORCE_INSTALL}" == "true" ]]; then
-        echo "[${caller}]: Notice, ${required_pkg} will be installed in --force mode"
-      else
-        echo "[${caller}]: Warning, the package ${required_pkg} is missing!"
+        pkg_status="FORCE_INSTALL"
+        retval=1
       fi
-      echo ""
 
-      if [[ "${missing_pkg_count}" -eq 1 ]]; then
-        echo "[${caller}]: Running system update for the first missing package ..."
-        if [[ "$(get_distro id)" == +(debian|ubuntu) ]]; then
-          apt-get -qq -y update
-          retval=$?
-        elif [[ "$(get_distro id)" == +(centos|fedora|rhel|almalinux|rocklylinux) ]]; then
-          dnf -q -y update
-          retval=$?
+      if [[ "${pkg_status}" != "installed" || "${retval}" -ne 0 ]]; then
+        ((missing_count++))
+        echo ""
+        if [[ "${FORCE_INSTALL}" == "true" ]]; then
+          echo "[${caller}]: Notice, ${required_cp} will be installed in --force mode"
+        else
+          echo "[${caller}]: Warning, the package ${required_cp} is missing!"
         fi
+        echo ""
+
+        if [[ "${missing_count}" -eq 1 ]]; then
+          echo "[${caller}]: Running system update for the first missing package ..."
+          if [[ "$(get_distro id)" == +(debian|ubuntu) ]]; then
+            apt-get -qq -y update
+            retval=$?
+          elif [[ "$(get_distro id)" == +(centos|fedora|rhel|almalinux|rocklylinux) ]]; then
+            dnf -q -y update
+            retval=$?
+          fi
+          get_status_message "${retval}"
+          echo ""
+        fi
+
+        echo "[${caller}]: ${missing_count}) Installing the $(to_ordinal "${missing_count}") missing package: ${required_cp} ..."
+        echo "-------"
+        echo ""
+        # Add custom package to install here
+        if [[ "${required_cp}" == +(bind-utils|dnsutils) ]]; then
+          if [[ "$(get_distro id)" == +(debian|ubuntu) ]]; then
+            apt-get -y install dnsutils
+            retval="$?"
+          elif
+            [[ "$(get_distro id)" == +(centos|almalinux|rockylinux|rhel) ]]
+          then
+            dnf -y install bind-utils
+            retval="$?"
+          fi
+        else
+          if [[ "$(get_distro id)" == +(debian|ubuntu) ]]; then
+            apt-get -y install "${required_cp}"
+            retval="$?"
+          else
+            dnf -y install "${required_cp}"
+            retval="$?"
+          fi
+        fi
+
         get_status_message "${retval}"
         echo ""
-      fi
-
-      echo "[${caller}]: ${missing_pkg_count}) Installing the $(to_ordinal "${missing_pkg_count}") missing package: ${required_pkg} ..."
-      echo "-------"
-      echo ""
-      # Add custom package to install here
-      if [[ "${required_pkg}" == +(bind-utils|dnsutils) ]]; then
-        if [[ "$(get_distro id)" == +(debian|ubuntu) ]]; then
-          apt-get -y install dnsutils
-          retval="$?"
-        elif
-          [[ "$(get_distro id)" == +(centos|almalinux|rockylinux|rhel) ]]
-        then
-          dnf -y install bind-utils
-          retval="$?"
-        fi
       else
-        if [[ "$(get_distro id)" == +(debian|ubuntu) ]]; then
-          apt-get -y install "${required_pkg}"
-          retval="$?"
-        else
-          dnf -y install "${required_pkg}"
-          retval="$?"
-        fi
+        :
+        # echo "[${caller}]: The package ${required_cp} is installed."
       fi
-
-      get_status_message "${retval}"
-      echo ""
-    else
-      :
-      # echo "[${caller}]: The package ${required_pkg} is installed."
     fi
-
   done
 
 }
 
-declare CALLER FORCE_INSTALL INCLUDE_COMMANDS INCLUDE_PACKAGES
+declare CALLER FORCE_INSTALL INCLUDE_CPS
 SCRIPT_PATH="$(dirname "$(readlink -f "$0")")"
 SCRIPT_NAME=$(basename -- "$0")
 CALLER="$(basename -- "$0")"
 
 FORCE_INSTALL=false
-INCLUDE_COMMANDS=""
-INCLUDE_PACKAGES=""
+INCLUDE_CPS=""
 
 # If no argument is supplied we quit
 if [[ $# -eq 0 ]]; then
-  echo "Usage: $(basename -- "$0") [-f] [-i package1,package2,...] [-h]"
-  echo "  -f: Force install of packages"
-  echo "  -i: Include packages"
+  echo "Usage: $(basename -- "$0") [-f] [-i package1/command1,package2/command2,...] [-h]"
+  echo "  -f: Force install of commands/packages"
+  echo "  -i: Include commands/packages"
   echo "  -h: Show this help"
   exit 1
 fi
@@ -781,9 +777,9 @@ fi
 while [ "$#" -gt 0 ]; do
   case "$1" in
   -h | --help)
-    echo "Usage: $(basename -- "$0") [-f] [-i package1,package2,...] [-h]"
-    echo "  -f: Force install of packages"
-    echo "  -i: Include packages"
+    echo "Usage: $(basename -- "$0") [-f] [-i package1/command1,package2/command2,...] [-h]"
+    echo "  -f: Force install of commands/packages"
+    echo "  -i: Include commands/packages"
     echo "  -h: Show this help"
     exit 0
     ;;
@@ -804,12 +800,8 @@ while [ "$#" -gt 0 ]; do
     FORCE_INSTALL=true
     shift
     ;;
-  -c | --include-command | --include-commands | --list-commands | --commands)
-    INCLUDE_COMMANDS="$2"
-    shift 2
-    ;;
-  -p | --include-package | --include-packages | --list-packages | --packages)
-    INCLUDE_PACKAGES="$2"
+  -i | --include | --required | --install)
+    INCLUDE_CPS="$2"
     shift 2
     ;;
   -u | --update | update)
