@@ -2,12 +2,14 @@
 #"=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~="
 # ==================================================
 _APP_SPECIFIC_NAME="Maxibuild"
-_APP_VERSION="0.2.2"
+_APP_VERSION="0.2.3"
 _APP_STATUS="alpha"
 _APP_INFO="${_APP_SPECIFIC_NAME} is a bash script to manage packages."
 _APP_VERSION_STATUS="${_APP_VERSION}-${_APP_STATUS}"
 _AUTHOR="Author: Arafat Ali | Email: arafat@sofibox.com | (C) 2019-2022"
 # ====================================================
+# Usage:
+# maxibuild --include-packages "p1 p2 p3 p4" --include-commands "c1 c2 c3 c4" --force
 
 # This script is used to update script from a remote repository based on a given path
 # Usage: script_update [script_path]
@@ -176,8 +178,8 @@ maxibuild() {
   ((missing_pkg_count = 0))
 
   # Detect required commands
-  # Convert the arguments received from include_packages to array
-  read -ra required_cmds <<<"$(echo "${include_commands}" | tr ',' ' ' | tr -d '"')"
+  # Convert the arguments received from INCLUDE_PACKAGES to array
+  read -ra required_cmds <<<"$(echo "${INCLUDE_COMMANDS}" | tr ',' ' ' | tr -d '"')"
   # Loop through the received arguments. Do not quote the array, we want split elements:
   for required_cmd in ${required_cmds[*]}; do
     local cmd_status retval
@@ -185,13 +187,13 @@ maxibuild() {
     command -v "${required_cmd}" >/dev/null
     cmd_status="$?"
 
-    [[ "${force_install}" == "true" ]] && cmd_status=1
+    [[ "${FORCE_INSTALL}" == "true" ]] && cmd_status=1
 
     if [[ "${cmd_status}" -eq 1 ]]; then
       ((missing_cmd_count++))
       echo ""
 
-      if [[ "${force_install}" == "true" ]]; then
+      if [[ "${FORCE_INSTALL}" == "true" ]]; then
         echo "[${caller}]: Notice, ${required_cmd} will be installed in --force mode"
       else
         echo "[${caller}]: Warning, the command ${required_cmd} is missing!"
@@ -688,22 +690,22 @@ maxibuild() {
   done
 
   # Detect required packages
-  read -ra required_pkgs <<<"$(echo "${include_packages}" | tr ',' ' ' | tr -d '"')"
+  read -ra required_pkgs <<<"$(echo "${INCLUDE_PACKAGES}" | tr ',' ' ' | tr -d '"')"
 
   for required_pkg in ${required_pkgs[*]}; do
     local pkg_status retval
     pkg_status="$(dpkg-query -W --showformat='${db:Status-Status}' "${required_pkg}" 2>&1)"
     retval="$?"
 
-    if [[ "${force_install}" == "true" ]]; then
-      pkg_status="force_install"
+    if [[ "${FORCE_INSTALL}" == "true" ]]; then
+      pkg_status="FORCE_INSTALL"
       retval=1
     fi
 
     if [[ "${pkg_status}" != "installed" || "${retval}" -ne 0 ]]; then
       ((missing_pkg_count++))
       echo ""
-      if [[ "${force_install}" == "true" ]]; then
+      if [[ "${FORCE_INSTALL}" == "true" ]]; then
         echo "[${caller}]: Notice, ${required_pkg} will be installed in --force mode"
       else
         echo "[${caller}]: Warning, the package ${required_pkg} is missing!"
@@ -758,12 +760,14 @@ maxibuild() {
 
 }
 
-declare caller force_install include_commands include_packages
-caller="$(basename -- "$0")->${FUNCNAME[0]}"
+declare CALLER FORCE_INSTALL INCLUDE_COMMANDS INCLUDE_PACKAGES
+SCRIPT_PATH="$(dirname "$(readlink -f "$0")")"
+SCRIPT_NAME=$(basename -- "$0")
+CALLER="$(basename -- "$0")"
 
-force_install=false
-include_commands=""
-include_packages=""
+FORCE_INSTALL=false
+INCLUDE_COMMANDS=""
+INCLUDE_PACKAGES=""
 
 # If no argument is supplied we quit
 if [[ $# -eq 0 ]]; then
@@ -797,26 +801,30 @@ while [ "$#" -gt 0 ]; do
     ;;
   # This will force both packages and commands installation
   -f | --force-install | --force)
-    force_install=true
+    FORCE_INSTALL=true
     shift
     ;;
   -c | --include-command | --include-commands | --list-commands | --commands)
-    include_commands="$2"
+    INCLUDE_COMMANDS="$2"
     shift 2
     ;;
   -p | --include-package | --include-packages | --list-packages | --packages)
-    include_packages="$2"
+    INCLUDE_PACKAGES="$2"
     shift 2
     ;;
   -u | --update | update)
     check_update
     exit $?
     ;;
+  editself | edit-script | edit)
+    nano -c "${SCRIPT_PATH}/${SCRIPT_NAME}"
+    exit $?
+    ;;
   --)
     break
     ;;
   *)
-    echo "[${caller}]: Error, invalid  or option [ $1 ]. Use --help to see the valid actions or options"
+    echo "[${CALLER}]: Error, invalid  or option [ $1 ]. Use --help to see the valid actions or options"
     exit 1
 
     ;;
