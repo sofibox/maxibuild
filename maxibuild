@@ -223,7 +223,8 @@ maxibuild() {
       if [ "${required_cmd}" == "mail" ]; then
         [[ "$(get_distro id)" == +(debian|ubuntu) ]] && apt-get -y install bsd-mailx
         [[ "$(get_distro id)" == +(centos|almalinux|rockylinux) ]] && apt-get -y install bsd-mailx
-        retval=$?
+        get_status_message "$?"
+        echo ""
       elif [ "${required_cmd}" == "ipcalc" ]; then
         if [[ "$(get_distro id)" == +(debian|ubuntu) ]]; then
           local ipcalc_bin script_install_path
