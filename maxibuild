@@ -758,12 +758,16 @@ maxibuild() {
             get_status_message "$?"
             echo ""
 
+            echo "[${caller}]: Checking if grepaddr is installed ..."
+            command -v grepaddr &>/dev/null
+            get_status_message "$?"
+
           fi
-          command -v "${required_cp}" &>/dev/null
-          get_status_message "$?"
+
         elif [[ "${required_cp}" == +(gotify-server) ]]; then
           if [[ "$(get_distro id)" == +(debian|ubuntu|centos|almalinux|rockylinux) ]]; then
-            local gotify_server_bin script_install_path
+            local script_install_path gotify_server_system_username gotify_server_system_group gotify_server_platform gotify_server_app_name gotify_server_service_name gotify_server_service_location\
+             gotify_server_app_path gotify_server_bin gotify_server_data_path gotify_server_config gotify_server_latest_version gotify_server_latest_url
             script_install_path="/usr/local/opencode/gotify"
 
             gotify_server_system_username="gotify"
@@ -1207,8 +1211,7 @@ maxibuild() {
               yq_latest_version=$(curl -s https://api.github.com/repos/mikefarah/yq/releases/latest | grep "tag_name" | cut -d '"' -f 4)
               yq_latest_url="https://github.com/mikefarah/yq/releases/download/${yq_latest_version}/${yq_binary}"
 
-
-              echo "[${caller}]: The latest version of yq is ${yq_latest_url}"
+              echo "[${caller}]: The latest version of yq is ${yq_latest_version}"
 
               echo "[${caller}]: Removing the old yq installation"
               rm -rf "${install_temp_path}" "/usr/local/bin/yq"
