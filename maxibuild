@@ -2,7 +2,7 @@
 #"=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~="
 # ==================================================
 _APP_SPECIFIC_NAME="Maxibuild"
-_APP_VERSION="0.2.8"
+_APP_VERSION="0.2.9"
 _APP_STATUS="alpha"
 _APP_INFO="${_APP_SPECIFIC_NAME} is a bash script to manage packages."
 _APP_VERSION_STATUS="${_APP_VERSION}-${_APP_STATUS}"
@@ -181,7 +181,7 @@ maxibuild() {
 
   for required_cp in ${required_cps[*]}; do
 
-    if [[ "${required_cp}" = +(mail|linode-cli|ipcalc|maxipi|maxiaide|maxigpg|maxiperm|maxida|dbxcli|ip|pstree|netstat|puttygen|grepaddr|gotify-server|gotify-client|blcheck|wp|wpcli) ]]; then
+    if [[ "${required_cp}" = +(mail|linode-cli|ipcalc|maxipi|maxiaide|maxigpg|maxiperm|maxida|dbxcli|ip|pstree|netstat|puttygen|grepaddr|gotify-server|gotify-client|blcheck|wp|wpcli|rclone) ]]; then
 
       local cmd_status retval
       # Using command to obtain installation status
@@ -1082,7 +1082,7 @@ maxibuild() {
             wpcli_bin="${script_install_path}/wp"
 
             echo "[${caller}]: Removing the old wpcli installation"
-            rm -rf "${script_install_path}" "/usr/local/bin/wp" "/usr/bin/wp"
+            rm -rf "${script_install_path}" "/usr/local/bin/wp" "/usr/bin/wp" "/usr/local/bin/wpcli" "/usr/bin/wpcli"
             get_status_message "$?"
             echo ""
 
@@ -1116,6 +1116,10 @@ maxibuild() {
             get_status_message "$?"
             echo ""
 
+            echo "[${caller}]: Creating an alias symbolic link for wp as wpcli ..."
+            ln -s "${wpcli_bin}" "/usr/local/bin/wpcli"
+            get_status_message "$?"
+            echo ""
 
             # If you don't have PHP CLI installed, you will get this error when you run the command wp
             # /usr/bin/env: 'php': No such file or directory
@@ -1128,10 +1132,71 @@ maxibuild() {
             command -v wp &>/dev/null
             get_status_message "$?"
 
+          fi
+        elif [[ "${required_cp}" == +(rclone) ]]; then
+          if [[ "$(get_distro id)" == +(debian|ubuntu|centos|almalinux|rockylinux) ]]; then
+            local install_temp_path
+
+            install_temp_path="${TEMP_PATH}/rclone"
+
+            echo "[${caller}]: Removing the old rclone installation"
+            rm -rf "${install_temp_path}" "/usr/local/bin/rclone"
+            get_status_message "$?"
+            echo ""
+
+            echo "[${caller}]: Creating a temporary installation directory for rclone ..."
+            mkdir -p "${install_temp_path}"
+            get_status_message "$?"
+            echo ""
+
+            cd "${install_temp_path}" || {
+              echo "[${caller}]: ERROR, could not change directory to ${install_temp_path}"
+              exit 1
+            }
+
+            echo "[${caller}]: Downloading rclone ..."
+            curl -O https://downloads.rclone.org/rclone-current-linux-amd64.zip
+            get_status_message "$?"
+            echo ""
+
+            echo "[${caller}]: Unzipping rclone ..."
+            unzip rclone-current-linux-amd64.zip
+            get_status_message "$?"
+            echo ""
+
+            cd rclone-*-linux-amd64 || {
+              echo "[${caller}]: ERROR, could not change directory to rclone-*-linux-amd64"
+              exit 1
+            }
+
+            echo "[${caller}]: Moving rclone to /usr/local/bin/rclone ..."
+            mv rclone /usr/local/bin
+            get_status_message "$?"
+            echo ""
+
+            cd "${install_temp_path}" || {
+              echo "[${caller}]: ERROR, could not change directory to ${install_temp_path}"
+              exit 1
+            }
+
+            echo "[${caller}]: Removing rclone installation temporary files ..."
+
+            rm -rf "${install_temp_path}"
+            get_status_message "$?"
+            echo ""
+
+            echo "[${caller}]: Giving execute permission to rclone ..."
+            chmod +x /usr/local/bin/rclone
+            get_status_message "$?"
+            echo ""
+
+            echo "[${caller}]: Checking whether rclone command is available ..."
+            command -v rclone &>/dev/null
+            get_status_message "$?"
 
           fi
-
         else
+
           # Do normal distro installation
           if [[ "$(get_distro id)" == +(debian|ubuntu) ]]; then
             apt-get -y install "${required_cp}"
