@@ -758,16 +758,22 @@ maxibuild() {
             get_status_message "$?"
             echo ""
 
+            echo "grepaddr has been installed. Please note that you need a python 3.6+ installation to use it."
+            echo ""
+
             echo "[${caller}]: Checking if grepaddr is installed ..."
             command -v grepaddr &>/dev/null
             get_status_message "$?"
 
           fi
 
-        elif [[ "${required_cp}" == +(gotify-server) ]]; then
+        elif
+
+          [[ "${required_cp}" == +(gotify-server) ]]
+        then
           if [[ "$(get_distro id)" == +(debian|ubuntu|centos|almalinux|rockylinux) ]]; then
-            local script_install_path gotify_server_system_username gotify_server_system_group gotify_server_platform gotify_server_app_name gotify_server_service_name gotify_server_service_location\
-             gotify_server_app_path gotify_server_bin gotify_server_data_path gotify_server_config gotify_server_latest_version gotify_server_latest_url
+            local script_install_path gotify_server_system_username gotify_server_system_group gotify_server_platform gotify_server_app_name gotify_server_service_name gotify_server_service_location \
+              gotify_server_app_path gotify_server_bin gotify_server_data_path gotify_server_config gotify_server_latest_version gotify_server_latest_url
             script_install_path="/usr/local/opencode/gotify"
 
             gotify_server_system_username="gotify"
