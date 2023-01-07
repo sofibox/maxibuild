@@ -2,7 +2,7 @@
 #"=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~="
 # ==================================================
 _APP_SPECIFIC_NAME="Maxibuild"
-_APP_VERSION="0.2.4"
+_APP_VERSION="0.2.5"
 _APP_STATUS="alpha"
 _APP_INFO="${_APP_SPECIFIC_NAME} is a bash script to manage packages."
 _APP_VERSION_STATUS="${_APP_VERSION}-${_APP_STATUS}"
@@ -181,7 +181,7 @@ maxibuild() {
 
   for required_cp in ${required_cps[*]}; do
 
-    if [[ "${required_cp}" = +(mail|linode-cli|ipcalc|maxipi|maxiaide|maxigpg|maxiperm|maxida|dbxcli|ip|pstree|netstat|puttygen) ]]; then
+    if [[ "${required_cp}" = +(mail|linode-cli|ipcalc|maxipi|maxiaide|maxigpg|maxiperm|maxida|dbxcli|ip|pstree|netstat|puttygen|grepaddr) ]]; then
 
       local cmd_status retval
       # Using command to obtain installation status
@@ -668,20 +668,51 @@ maxibuild() {
           get_status_message "$?"
         elif [[ "${required_cp}" == +(puttygen) ]]; then
           [[ "$(get_distro id)" == +(debian|ubuntu|centos|almalinux|rockylinux) ]] && apt-get -y install putty-tools
+          command -v "${required_cp}" &>/dev/null
+          get_status_message "$?"
+        elif [[ "${required_cp}" == +(grepaddr) ]]; then
+          if [[ "$(get_distro id)" == +(debian|ubuntu|centos|almalinux|rockylinux) ]]; then
 
+            local grepaddr_bin script_install_path
+            script_install_path="/usr/local/opencode/grepaddr"
+            grepaddr_bin="${script_install_path}/grepaddr"
+
+            echo "[${caller}]: Removing the old grepaddr directory"
+            rm -rf "${script_install_path}" /usr/local/bin/grepaddr /usr/bin/grepaddr
+            get_status_message "$?"
+            echo ""
+
+            echo "[${caller}]: Creating an installation directory for grepaddr ..."
+            mkdir -p "${script_install_path}"
+            get_status_message "$?"
+            echo ""
+
+            echo "[${caller}]: Cloning the grepaddr repository ..."
+            git clone https://github.com/sofibox/grepaddr.git "${script_install_path}"
+            get_status_message "$?"
+            echo ""
+
+            echo "[${caller}]: Giving execution permission to the grepaddr installation script ..."
+            chmod +x "${grepaddr_bin}"
+            get_status_message "$?"
+            echo ""
+
+            echo "[${caller}]: Creating a symbolic link to the grepaddr installation script ..."
+            ln -s "${grepaddr_bin}" /usr/local/bin
+            get_status_message "$?"
+            echo ""
+
+          fi
           command -v "${required_cp}" &>/dev/null
           get_status_message "$?"
         else
           # Do normal distro installation
           if [[ "$(get_distro id)" == +(debian|ubuntu) ]]; then
             apt-get -y install "${required_cp}"
-            command -v "${required_cp}" &>/dev/null
-
           elif [[ "$(get_distro id)" == +(centos|almalinux|rockylinux) ]]; then
             dnf -y install "${required_cp}"
-            command -v "${required_cp}" &>/dev/null
-
           fi
+          command -v "${required_cp}" &>/dev/null
           get_status_message "$?"
 
         fi
