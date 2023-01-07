@@ -748,12 +748,22 @@ maxibuild() {
             get_status_message "$?"
             echo ""
 
-            echo "[${caller}]: Giving execution permission to the grepaddr installation script ..."
-            chmod +x "${grepaddr_bin}"
+            echo "[${caller}]: Giving execution permission to the grepaddr.py installation script ..."
+            chmod +x "${grepaddr_bin}.py"
             get_status_message "$?"
             echo ""
 
             echo "[${caller}]: Creating a symbolic link to the grepaddr installation script ..."
+            ln -s "${grepaddr_bin}.py" "/usr/local/bin"
+            get_status_message "$?"
+            echo ""
+
+            echo "[${caller}]: Giving execution permission to the grepaddr.py alias called grepaddr ..."
+            chmod +x "${grepaddr_bin}"
+            get_status_message "$?"
+            echo ""
+
+            echo "[${caller}]: Creating a symbolic link to the grepaddr.py alias called grepaddr ..."
             ln -s "${grepaddr_bin}" /usr/local/bin
             get_status_message "$?"
             echo ""
