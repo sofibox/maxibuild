@@ -2,7 +2,7 @@
 #"=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~="
 # ==================================================
 _APP_SPECIFIC_NAME="Maxibuild"
-_APP_VERSION="0.2.6"
+_APP_VERSION="0.2.7"
 _APP_STATUS="alpha"
 _APP_INFO="${_APP_SPECIFIC_NAME} is a bash script to manage packages."
 _APP_VERSION_STATUS="${_APP_VERSION}-${_APP_STATUS}"
@@ -181,7 +181,7 @@ maxibuild() {
 
   for required_cp in ${required_cps[*]}; do
 
-    if [[ "${required_cp}" = +(mail|linode-cli|ipcalc|maxipi|maxiaide|maxigpg|maxiperm|maxida|dbxcli|ip|pstree|netstat|puttygen|grepaddr|gotify-server|gotify-client) ]]; then
+    if [[ "${required_cp}" = +(mail|linode-cli|ipcalc|maxipi|maxiaide|maxigpg|maxiperm|maxida|dbxcli|ip|pstree|netstat|puttygen|grepaddr|gotify-server|gotify-client|blcheck) ]]; then
 
       local cmd_status retval
       # Using command to obtain installation status
@@ -1029,6 +1029,44 @@ maxibuild() {
             echo "[${caller}]: Checking whether gotify client command is available ..."
             command -v "${gotify_client_app_name}" &>/dev/null
             get_status_message "$?"
+
+          fi
+        elif [[ "${required_cp}" == +(blcheck) ]]; then
+          if [[ "$(get_distro id)" == +(debian|ubuntu|centos|almalinux|rockylinux) ]]; then
+            local blcheck_bin script_install_path
+
+            script_install_path="/usr/local/opencode/blcheck"
+            blcheck_bin="${script_install_path}/blcheck"
+
+            echo "[${caller}]: Removing the old blcheck installation"
+            rm -rf "${script_install_path}" "/usr/local/bin/blcheck" "/usr/bin/blcheck"
+            get_status_message "$?"
+            echo ""
+
+            echo "[${caller}]: Creating an installation directory for blcheck ..."
+            mkdir -p "${script_install_path}"
+            get_status_message "$?"
+            echo ""
+
+            echo "[${caller}]: Downloading blcheck from github ..."
+            git clone https://github.com/sofibox/blcheck.git "${script_install_path}"
+            get_status_message "$?"
+            echo ""
+
+            echo "[${caller}]: Giving execute permission to blcheck ..."
+            chmod +x "${blcheck_bin}"
+            get_status_message "$?"
+            echo ""
+
+            echo "[${caller}]: Creating a symbolic link for blcheck ..."
+            ln -s "${blcheck_bin}" "/usr/local/bin/blcheck"
+            get_status_message "$?"
+            echo ""
+
+            echo "[${caller}]: Checking whether blcheck command is available ..."
+            command -v blcheck &>/dev/null
+            get_status_message "$?"
+
 
           fi
 
