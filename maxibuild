@@ -2,7 +2,7 @@
 #"=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~="
 # ==================================================
 _APP_SPECIFIC_NAME="Maxibuild"
-_APP_VERSION="0.2.9"
+_APP_VERSION="0.3.0"
 _APP_STATUS="alpha"
 _APP_INFO="${_APP_SPECIFIC_NAME} is a bash script to manage packages."
 _APP_VERSION_STATUS="${_APP_VERSION}-${_APP_STATUS}"
@@ -181,7 +181,7 @@ maxibuild() {
 
   for required_cp in ${required_cps[*]}; do
 
-    if [[ "${required_cp}" = +(mail|linode-cli|ipcalc|maxipi|maxiaide|maxigpg|maxiperm|maxida|dbxcli|ip|pstree|netstat|puttygen|grepaddr|gotify-server|gotify-client|blcheck|wp|wpcli|rclone) ]]; then
+    if [[ "${required_cp}" = +(mail|linode-cli|ipcalc|maxipi|maxiaide|maxigpg|maxiperm|maxida|dbxcli|ip|pstree|netstat|puttygen|grepaddr|gotify-server|gotify-client|blcheck|wp|wpcli|rclone|yq) ]]; then
 
       local cmd_status retval
       # Using command to obtain installation status
@@ -1195,6 +1195,61 @@ maxibuild() {
             get_status_message "$?"
 
           fi
+        elif [[ "${required_cp}" == +(yq) ]]; then
+          if [[ "$(get_distro id)" == +(debian|ubuntu|centos|almalinux|rockylinux) ]]; then
+            local install_temp_path arch_string yq_binary
+
+            install_temp_path="${TEMP_PATH}/yq"
+            arch_string=$(arch)
+            yq_binary="yq_linux_amd64"
+
+            if [[ "${arch_string}" == "x86_64" ]]; then
+              yq_latest_version=$(curl -s https://api.github.com/repos/mikefarah/yq/releases/latest | grep "tag_name" | cut -d '"' -f 4)
+              yq_latest_url="https://github.com/mikefarah/yq/releases/download/${yq_latest_version}/${yq_binary}"
+
+
+              echo "[${caller}]: The latest version of yq is ${yq_latest_url}"
+
+              echo "[${caller}]: Removing the old yq installation"
+              rm -rf "${install_temp_path}" "/usr/local/bin/yq"
+              get_status_message "$?"
+              echo ""
+
+              echo "[${caller}]: Creating a temporary installation directory for yq ..."
+              mkdir -p "${install_temp_path}"
+              get_status_message "$?"
+              echo ""
+
+              cd "${install_temp_path}" || {
+                echo "[${caller}]: ERROR, could not change directory to ${install_temp_path}"
+                exit 1
+              }
+
+              echo "[${caller}]: Downloading yq ..."
+              wget -q "${yq_latest_url}" -O /usr/bin/yq
+              get_status_message "$?"
+              echo ""
+
+              echo "[${caller}]: Giving execute permission to yq ..."
+              chmod +x /usr/bin/yq
+              get_status_message "$?"
+              echo ""
+
+              echo "[${caller}]: Removing yq installation temporary files ..."
+              rm -rf "${install_temp_path}"
+              get_status_message "$?"
+              echo ""
+
+              echo "[${caller}]: Checking whether yq command is available ..."
+              command -v yq &>/dev/null
+              get_status_message "$?"
+            else
+              echo "[${caller}]: ERROR, yq is not available for ${arch_string} architecture"
+              exit 1
+            fi
+
+          fi
+
         else
 
           # Do normal distro installation
