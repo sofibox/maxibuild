@@ -2,7 +2,7 @@
 #"=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~="
 # ==================================================
 _APP_SPECIFIC_NAME="Maxibuild"
-_APP_VERSION="0.2.5"
+_APP_VERSION="0.2.6"
 _APP_STATUS="alpha"
 _APP_INFO="${_APP_SPECIFIC_NAME} is a bash script to manage packages."
 _APP_VERSION_STATUS="${_APP_VERSION}-${_APP_STATUS}"
@@ -181,7 +181,7 @@ maxibuild() {
 
   for required_cp in ${required_cps[*]}; do
 
-    if [[ "${required_cp}" = +(mail|linode-cli|ipcalc|maxipi|maxiaide|maxigpg|maxiperm|maxida|dbxcli|ip|pstree|netstat|puttygen|grepaddr) ]]; then
+    if [[ "${required_cp}" = +(mail|linode-cli|ipcalc|maxipi|maxiaide|maxigpg|maxiperm|maxida|dbxcli|ip|pstree|netstat|puttygen|grepaddr|gotify-server|gotify-client) ]]; then
 
       local cmd_status retval
       # Using command to obtain installation status
@@ -224,6 +224,62 @@ maxibuild() {
               apt-get -qq -y install git
             elif [[ "$(get_distro id)" == +(centos|fedora|rhel|almalinux|rocklylinux) ]]; then
               dnf -q -y install git
+            fi
+            get_status_message "$?"
+            echo ""
+          fi
+
+          # Check if curl is installed (it is necessary)
+          if ! command -v curl >/dev/null; then
+            echo "[${caller}]: Warning, curl is missing!"
+            echo ""
+            echo "[${caller}]: Installing curl ..."
+            if [[ "$(get_distro id)" == +(debian|ubuntu) ]]; then
+              apt-get -qq -y install curl
+            elif [[ "$(get_distro id)" == +(centos|fedora|rhel|almalinux|rocklylinux) ]]; then
+              dnf -q -y install curl
+            fi
+            get_status_message "$?"
+            echo ""
+          fi
+
+          # Check if wget is installed (it is necessary)
+          if ! command -v wget >/dev/null; then
+            echo "[${caller}]: Warning, wget is missing!"
+            echo ""
+            echo "[${caller}]: Installing wget ..."
+            if [[ "$(get_distro id)" == +(debian|ubuntu) ]]; then
+              apt-get -qq -y install wget
+            elif [[ "$(get_distro id)" == +(centos|fedora|rhel|almalinux|rocklylinux) ]]; then
+              dnf -q -y install wget
+            fi
+            get_status_message "$?"
+            echo ""
+          fi
+
+          # Check if unzip is installed (it is necessary)
+          if ! command -v unzip >/dev/null; then
+            echo "[${caller}]: Warning, unzip is missing!"
+            echo ""
+            echo "[${caller}]: Installing unzip ..."
+            if [[ "$(get_distro id)" == +(debian|ubuntu) ]]; then
+              apt-get -qq -y install unzip
+            elif [[ "$(get_distro id)" == +(centos|fedora|rhel|almalinux|rocklylinux) ]]; then
+              dnf -q -y install unzip
+            fi
+            get_status_message "$?"
+            echo ""
+          fi
+
+          # Check if tar is installed (it is necessary)
+          if ! command -v tar >/dev/null; then
+            echo "[${caller}]: Warning, tar is missing!"
+            echo ""
+            echo "[${caller}]: Installing tar ..."
+            if [[ "$(get_distro id)" == +(debian|ubuntu) ]]; then
+              apt-get -qq -y install tar
+            elif [[ "$(get_distro id)" == +(centos|fedora|rhel|almalinux|rocklylinux) ]]; then
+              dnf -q -y install tar
             fi
             get_status_message "$?"
             echo ""
@@ -705,6 +761,277 @@ maxibuild() {
           fi
           command -v "${required_cp}" &>/dev/null
           get_status_message "$?"
+        elif [[ "${required_cp}" == +(gotify-server) ]]; then
+          if [[ "$(get_distro id)" == +(debian|ubuntu|centos|almalinux|rockylinux) ]]; then
+            local gotify_server_bin script_install_path
+            script_install_path="/usr/local/opencode/gotify"
+
+            gotify_server_system_username="gotify"
+            gotify_server_system_group="gotify"
+            gotify_server_platform="linux-amd64"
+            gotify_server_app_name="gotify-server"
+            gotify_server_service_name="gotify-server"
+            gotify_server_service_location="/etc/systemd/system/${gotify_server_service_name}.service"
+            gotify_server_app_path="${script_install_path}/server"
+            gotify_server_bin="${gotify_server_app_path}/${gotify_server_app_name}"
+            gotify_server_data_path="${gotify_server_app_path}/data"
+            gotify_server_config="${gotify_server_app_path}/config.yml"
+            gotify_server_latest_version=$(curl -s https://api.github.com/repos/gotify/server/releases/latest | grep "tag_name" | cut -d '"' -f 4)
+            gotify_server_latest_url="https://github.com/gotify/server/releases/download/${gotify_server_latest_version}/gotify-${gotify_server_platform}.zip"
+
+            if [ "${gotify_server_app_name}" == "gotify" ]; then
+              echo "[${caller}]: Error, it is not recommend to use the gotify as the application name because you will have conflict with the gotify client. Please use something else such as gotify-server"
+              exit 1
+            fi
+
+            echo "[${caller}]: Latest version of gotify server is ${gotify_server_latest_url}"
+            echo ""
+
+            if [[ "$(systemctl is-active htop)" == "active" ]]; then
+              echo "[${caller}]: Stopping ${gotify_server_service_name}.service"
+              systemctl stop "${gotify_server_service_name}.service"
+              get_status_message "$?"
+              echo ""
+            fi
+
+            echo "[${caller}]: Removing the old gotify server installation"
+
+            rm -rf "${gotify_server_app_path}" /etc/systemd/system/"${gotify_server_service_name}.service" "/usr/local/bin/${gotify_server_app_name}"
+            get_status_message "$?"
+            echo ""
+
+            if id -u "${gotify_server_system_username}" >/dev/null 2>&1; then
+              echo "[${caller}]: Removing gotify server previous user ..."
+              userdel -r "${gotify_server_system_username}"
+              get_status_message "$?"
+              echo ""
+            fi
+
+            if [[ $(getent group ${gotify_server_system_group}) ]]; then
+              echo "[${caller}]: Removing gotify server previous group ..."
+              groupdel "${gotify_server_system_group}"
+              get_status_message "$?"
+              echo ""
+            fi
+
+            echo "[${caller}]: Creating an installation directory for gotify server ..."
+            mkdir -p "${gotify_server_app_path}"
+            get_status_message "$?"
+            echo ""
+
+            cd "${gotify_server_app_path}" || {
+              echo "[${caller}]: ERROR, could not change directory to ${gotify_server_app_path}"
+              exit 1
+            }
+            echo "[${caller}]: Downloading the latest version of gotify server ..."
+
+            wget -q "${gotify_server_latest_url}"
+            get_status_message "$?"
+            echo ""
+
+            echo "[${caller}]: Unzipping the gotify server ..."
+            unzip -q "gotify-${gotify_server_platform}.zip"
+            get_status_message "$?"
+            echo ""
+
+            # We don't need the zip file anymore
+            echo "[${caller}]: Removing previous gotify server zip file ..."
+            rm -rf "gotify-${gotify_server_platform}.zip"
+            get_status_message "$?"
+            echo ""
+
+            echo "[${caller}]: Renaming the gotify server binary ..."
+            mv "${gotify_server_app_path}/gotify-${gotify_server_platform}" "${gotify_server_bin}"
+            get_status_message "$?"
+            echo ""
+
+            echo "[${caller}]: Changing the owner of the gotify server binary to root:root ..."
+            chown root:root "${gotify_server_bin}"
+            get_status_message "$?"
+            echo ""
+
+            echo "[${caller}]: Giving execution permission to the gotify server binary ..."
+            chmod +x "${gotify_server_bin}"
+            get_status_message "$?"
+            echo ""
+
+            echo "[${caller}]: Creating gotify server symbolic link to /usr/local/bin ..."
+            ln -s "${gotify_server_bin}" /usr/local/bin
+            get_status_message "$?"
+            echo ""
+
+            echo "[${caller}]: Creating a gotify server group ..."
+            groupadd -r "${gotify_server_system_group}"
+            get_status_message "$?"
+            echo ""
+
+            echo "[${caller}]: Creating a gotify server user ..."
+            useradd -M -d "${gotify_server_app_path}" -s /sbin/nologin -r -g "${gotify_server_system_group}" "${gotify_server_system_username}"
+            get_status_message "$?"
+            echo ""
+
+            echo "[${caller}]: Downloading the gotify server sample configuration file ..."
+            wget https://raw.githubusercontent.com/gotify/server/master/config.example.yml -O "${gotify_server_config}"
+            get_status_message "$?"
+            echo ""
+
+            echo "[${caller}]: Changing the owner of the gotify server configuration file to root:root ..."
+            chown root:root "${gotify_server_config}"
+            get_status_message "$?"
+            echo ""
+
+            echo "[${caller}]: Changing the permission of the gotify server configuration file to 644 ..."
+            chmod 644 "${gotify_server_config}"
+            get_status_message "$?"
+            echo ""
+
+            echo "[${caller}]: Creating a data directory for gotify server ..."
+            mkdir -p "${gotify_server_data_path}"
+            get_status_message "$?"
+            echo ""
+
+            echo "[${caller}]: Changing the owner of the gotify server data directory to ${gotify_server_system_username}:${gotify_server_system_group} ..."
+            chown -R "${gotify_server_system_username}:${gotify_server_system_group}" "${gotify_server_data_path}"
+            get_status_message "$?"
+            echo ""
+
+            echo "[${caller}]: Changing the permission of the gotify server data directory to 755 ..."
+            chmod -R 755 "${gotify_server_data_path}"
+            get_status_message "$?"
+            echo ""
+
+            echo "[${caller}]: Creating a systemd service file for gotify server at ${gotify_server_service_location} ..."
+
+            {
+              echo "[Unit]"
+              echo "Description=Gotify Push Notification Server"
+              echo "Documentation=https://gotify.net/docs"
+              echo "After=network-online.target"
+              echo "Wants=network-online.target systemd-networkd-wait-online.service"
+
+              echo ""
+              echo "[Service]"
+              echo "Type=simple"
+              echo "Restart=on-abnormal"
+              echo "User=${gotify_server_system_username}"
+              echo "Group=${gotify_server_system_group}"
+
+              echo "WorkingDirectory=${gotify_server_app_path}"
+              echo "ExecStart=${gotify_server_bin} -c ${gotify_server_config} -p ${gotify_server_data_path}"
+              echo "ExecStop=kill $MAINPID"
+              echo "ExecReload=kill -9 $MAINPID"
+
+              echo ""
+              echo "PrivateTmp=true"
+              echo "ProtectSystem=full"
+              echo "ReadWritePaths=${gotify_server_app_path}"
+              echo "ReadWriteDirectories=${gotify_server_app_path}"
+              echo "TimeoutStopSec=5s"
+
+              echo ""
+              echo "[Install]"
+              echo "WantedBy=multi-user.target"
+            } >"${gotify_server_service_location}"
+            get_status_message "$?"
+            echo ""
+
+            echo "[${caller}]: Changing the owner of the gotify server systemd service file to root:root ..."
+            chown root:root "${gotify_server_service_location}"
+            get_status_message "$?"
+            echo ""
+
+            echo "[${caller}]: Changing the permission of the gotify server systemd service file to 644 ..."
+            chmod 644 "${gotify_server_service_location}"
+            get_status_message "$?"
+            echo ""
+
+            echo "[${caller}]: Reloading systemd daemon ..."
+            systemctl daemon-reload
+            get_status_message "$?"
+            echo ""
+
+            echo "[${caller}]: Enabling gotify server systemd service ..."
+            systemctl enable "${gotify_server_service_name}"
+            get_status_message "$?"
+            echo ""
+
+            echo "[${caller}]: Starting gotify server systemd service ..."
+            systemctl start "${gotify_server_service_name}"
+            get_status_message "$?"
+            echo ""
+
+            echo "[${caller}]: Checking the status of gotify server systemd service ..."
+            systemctl --no-pager status "${gotify_server_service_name}"
+            get_status_message "$?"
+            echo ""
+
+            echo "[${caller}]: Stopping gotify server systemd service ..."
+            systemctl stop "${gotify_server_service_name}"
+            get_status_message "$?"
+            echo ""
+
+            echo "[${caller}]: Checking whether gotify server command is available ..."
+            command -v "${gotify_server_app_name}" &>/dev/null
+            get_status_message "$?"
+
+          fi
+        elif [[ "${required_cp}" == +(gotify-client) ]]; then
+          if [[ "$(get_distro id)" == +(debian|ubuntu|centos|almalinux|rockylinux) ]]; then
+
+            local gotify_client_bin script_install_path gotify_client_latest_version gotify_client_latest_url
+            script_install_path="/usr/local/opencode/gotify"
+
+            gotify_client_app_name="gotify"
+
+            if [ "${gotify_client_app_name}" == "gotify-server" ]; then
+              echo "[${caller}]: Error, it is not recommend to use the gotify-server as the gotify client application name. Please use other name such as gotify-client or gotify."
+              exit 1
+            fi
+            gotify_client_app_path="${script_install_path}/client"
+            gotify_client_bin="${gotify_client_app_path}/${gotify_client_app_name}"
+
+            gotify_client_latest_version="$(curl -s https://api.github.com/repos/gotify/cli/releases/latest | grep -oP '"tag_name": "\K(.*)(?=")')"
+            gotify_client_latest_url="https://github.com/gotify/cli/releases/download/${gotify_client_latest_version}/gotify-cli-linux-amd64"
+
+            echo "The latest version of gotify client is : ${gotify_client_latest_version}"
+
+            echo "[${caller}]: Removing the old gotify client installation"
+
+            rm -rf "${gotify_client_app_path}" "/usr/local/bin/${gotify_client_app_name}"
+            get_status_message "$?"
+            echo ""
+
+            echo "[${caller}]: Creating an installation directory for gotify client ..."
+            mkdir -p "${gotify_client_app_path}"
+            get_status_message "$?"
+            echo ""
+
+            cd "${gotify_client_app_path}" || {
+              echo "[${caller}]: ERROR, could not change directory to ${gotify_client_app_path}"
+              exit 1
+            }
+
+            echo "[${caller}]: Downloading gotify client (gotify-cli) ..."
+            curl -Lo "${gotify_client_bin}" "${gotify_client_latest_url}"
+            get_status_message "$?"
+            echo ""
+
+            echo "[${caller}]: Giving execute permission to gotify client (gotify-cli) ..."
+            chmod +x "${gotify_client_bin}"
+            get_status_message "$?"
+            echo ""
+
+            echo "[${caller}]: Creating a symbolic link for gotify client (gotify-cli) ..."
+            ln -s "${gotify_client_bin}" "/usr/local/bin/${gotify_client_app_name}"
+            get_status_message "$?"
+            echo ""
+
+            echo "[${caller}]: Checking whether gotify client command is available ..."
+            command -v "${gotify_client_app_name}" &>/dev/null
+            get_status_message "$?"
+
+          fi
+
         else
           # Do normal distro installation
           if [[ "$(get_distro id)" == +(debian|ubuntu) ]]; then
@@ -791,6 +1118,7 @@ maxibuild() {
 declare CALLER FORCE_INSTALL INCLUDE_CPS
 SCRIPT_PATH="$(dirname "$(readlink -f "$0")")"
 SCRIPT_NAME=$(basename -- "$0")
+TEMP_PATH="/tmp"
 CALLER="$(basename -- "$0")"
 
 FORCE_INSTALL=false
