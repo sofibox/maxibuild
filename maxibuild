@@ -1245,12 +1245,12 @@ maxibuild() {
               }
 
               echo "[${caller}]: Downloading yq ..."
-              wget -q "${yq_latest_url}" -O /usr/bin/yq
+              wget -q "${yq_latest_url}" -O /usr/local/bin/yq
               get_status_message "$?"
               echo ""
 
               echo "[${caller}]: Giving execute permission to yq ..."
-              chmod +x /usr/bin/yq
+              chmod +x /usr/local/bin/yq
               get_status_message "$?"
               echo ""
 
