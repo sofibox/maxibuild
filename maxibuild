@@ -2,7 +2,7 @@
 #"=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~="
 # ==================================================
 _APP_SPECIFIC_NAME="Maxibuild"
-_APP_VERSION="0.3.0"
+_APP_VERSION="0.3.1"
 _APP_STATUS="alpha"
 _APP_INFO="${_APP_SPECIFIC_NAME} is a bash script to manage packages."
 _APP_VERSION_STATUS="${_APP_VERSION}-${_APP_STATUS}"
@@ -181,12 +181,21 @@ maxibuild() {
 
   for required_cp in ${required_cps[*]}; do
 
-    if [[ "${required_cp}" = +(mail|linode-cli|ipcalc|maxipi|maxiaide|maxigpg|maxiperm|maxida|dbxcli|ip|pstree|netstat|puttygen|grepaddr|gotify-server|gotify-client|blcheck|wp|wpcli|rclone|yq) ]]; then
+    if [[ "${required_cp}" == +(mail|linode-cli|ipcalc|maxipi|maxiaide|maxigpg|maxiperm|maxida|dbxcli|ip|pstree|netstat|puttygen|grepaddr|gotify-server|gotify-client|blcheck|wp|wpcli|rclone|yq|suricata_distro|suricata_backport|suricata_v6.0.9|suricata_v7.0.0-beta1) ]]; then
 
       local cmd_status retval
       # Using command to obtain installation status
       command -v "${required_cp}" >/dev/null
       cmd_status="$?"
+
+      # START Special case
+      if [[ "${required_cp}" == +(suricata_distro|suricata_backport|suricata_v6.0.9|suricata_v7.0.0-beta1) ]]; then
+        if command -v suricata &>/dev/null; then
+          echo "[${caller}]: Suricata is already installed. Use --force to force install ${required_cp}"
+          cmd_status=0
+        fi
+      fi
+      # END Special case
 
       [[ "${FORCE_INSTALL}" == "true" ]] && cmd_status=1
 
@@ -1268,9 +1277,237 @@ maxibuild() {
             fi
 
           fi
+        elif [[ "${required_cp}" == +(suricata_distro|suricata_backport|suricata_v6.0.9|suricata_v7.0.0-beta1) ]]; then
+
+          echo "[${caller}]: Removing apt source list backports for suricata ..."
+          sed -i "/deb http:\/\/deb.debian.org\/debian .*.-backports main/d" /etc/apt/sources.list
+          get_status_message "$?"
+          echo ""
+
+          if systemctl is-active --quiet suricata; then
+            echo "[${caller}]: Stopping suricata service ..."
+            systemctl stop suricata
+            get_status_message "$?"
+            echo ""
+          fi
+
+          echo "[${caller}]: Removing suricata existing installation ..."
+          apt-get remove -y --purge suricata
+          get_status_message "$?"
+          echo ""
+
+          echo "[${caller}]: Cleaning up old dependencies ..."
+          apt-get autoremove -y
+          get_status_message "$?"
+          echo ""
+
+          echo "[${caller}]: Removing all suricata leftover files ..."
+          rm -rfv /usr/share/suricata /etc/suricata /var/lib/suricata /var/log/suricata \
+            /usr/bin/suricata /usr/local/bin/suricata /etc/default/suricata /etc/init.d/suricata /etc/systemd/system/suricata.service \
+            /lib/systemd/system/suricata.service
+          get_status_message "$?"
+          echo ""
+
+          echo "[${caller}]: Reloading systemd daemon ..."
+          systemctl daemon-reload
+          get_status_message "$?"
+          echo ""
+
+          # Latest version as Jan 14 2023 is 6.0.1
+          if [[ "${required_cp}" == "suricata_distro" ]]; then
+            echo "[${caller}]: Installing suricata from the distribution repository ..."
+            if [[ "$(get_distro id)" == +(debian|ubuntu) ]]; then
+              apt-get install -y suricata
+              get_status_message "$?"
+              echo ""
+            elif
+              [[ "$(get_distro id)" == +(centos|almalinux|rockylinux) ]]
+            then
+              dnf install -y suricata
+              get_status_message "$?"
+              echo ""
+            else
+              echo "[${caller}]: ERROR, suricata distro installation is not available (or implemented) for $(get_distro id)"
+
+            fi
+          # Latest version as Jan 14 2023 is v6.0.9 for Debian 11
+          elif [[ "${required_cp}" == "suricata_backport" ]]; then
+            if [[ "$(get_distro codename)" == +(bullseye|buster) ]]; then
+              echo "[${caller}]: Writing backports to /etc/apt/sources.list ..."
+              # Only write this if it doesn't exist
+              grep -q "deb http://deb.debian.org/debian $(get_distro codename)-backports main" /etc/apt/sources.list || {
+                echo "deb http://deb.debian.org/debian $(get_distro codename)-backports main" >>/etc/apt/sources.list
+              }
+              get_status_message "$?"
+              echo ""
+
+              echo "[${caller}]: Updating the package lists ..."
+              apt-get -y update
+              get_status_message "$?"
+              echo ""
+
+              echo "[${caller}]: Installing suricata from the backports repository ..."
+              apt-get install -y suricata -t "$(get_distro codename)-backports"
+              get_status_message "$?"
+              echo ""
+            else
+              echo "[${caller}]: ERROR, suricata backport installation is not available (or implemented) for $(get_distro codename)"
+            fi
+          # Manual version - As Jan 14 2023, the latest version is v6.0.9 STABLE and v.7.0.0 BETA 1
+          elif [[ "${required_cp}" == +(suricata_v6.0.9|suricata_v7.0.0-beta1) ]]; then
+
+            local suricata_download_url install_temp_path="${TEMP_PATH}/suricata_install" version
+
+            if [[ "${required_cp}" == "suricata_v6.0.9" ]]; then
+              version="6.0.9"
+            elif [[ "${required_cp}" == "suricata_v7.0.0-beta1" ]]; then
+              version="7.0.0-beta1"
+            fi
+
+            suricata_download_url="https://www.openinfosecfoundation.org/download/suricata-${version}.tar.gz"
+
+            echo "[${caller}]: Removing suricata previous installation temporary files ..."
+            rm -rf "${install_temp_path}"
+            get_status_message "$?"
+            echo ""
+
+            echo "[${caller}]: Creating temporary directory for suricata installation ..."
+            mkdir -p "${install_temp_path}"
+            get_status_message "$?"
+            echo ""
+
+            if [[ "$(get_distro id)" == +(debian|ubuntu) ]]; then
+              echo "[${caller}]: Installing essential build tools ..."
+              apt-get -y install make autoconf automake libtool
+              get_status_message "$?"
+              echo ""
+
+              echo "[${caller}]: Installing suricata dependencies ..."
+              # libpcre2-devel is required for suricata v7.0.0-beta1
+              apt-get install -y libpcre3 libpcre3-dbg libpcre3-dev build-essential libpcap-dev libnet1-dev libyaml-0-2 libyaml-dev pkg-config zlib1g zlib1g-dev liblz4-dev libcap-ng-dev libcap-ng0 libmagic-dev libjansson-dev libnspr4-dev libnss3-dev libgeoip-dev liblua5.1-0-dev libhiredis-dev libevent-dev python3-yaml python3-distutils python3-pip libpcre2-dev
+              get_status_message "$?"
+              echo ""
+
+            elif [[ "$(get_distro id)" == +(centos|almalinux|rockylinux) ]]; then
+              echo "[${caller}]: Installing essential build tools ..."
+              dnf install -y make autoconf automake libtool
+              get_status_message "$?"
+              echo ""
+
+              # TODO this is not fully tested for rhel based distros
+              # pcre2-devel is required for suricata v7.0.0-beta1
+              echo "[${caller}]: Installing suricata dependencies ..."
+              dnf install -y pcre-devel libpcap-devel libnet-devel libyaml-devel pkgconfig zlib-devel liblz4-devel libcap-ng-devel libcap-ng0 libmagic-devel jansson-devel nspr-devel nss-devel GeoIP-devel lua-devel hiredis-devel libevent-devel python3-yaml python3-distutils python3-pip pcre2-devel
+              get_status_message "$?"
+              echo ""
+
+            fi
+
+            echo "[${caller}]: Installing suricata python dependencies ..."
+            pip3 install PyYAML
+            get_status_message "$?"
+            echo ""
+
+            echo "[${caller}]: Installing rustc package ..."
+            curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y 2>&1
+            get_status_message "$?"
+            echo ""
+
+            echo "[${caller}]: Source rustc environment ..."
+            source "${HOME}/.cargo/env"
+            get_status_message "$?"
+            echo ""
+
+            echo "[${caller}]: Downloading suricata latest version ..."
+            curl -sL "${suricata_download_url}" -o "${install_temp_path}/suricata.tar.gz"
+            get_status_message "$?"
+            echo ""
+
+            echo "[${caller}]: Extracting suricata latest version ..."
+            tar -xzf "${install_temp_path}/suricata.tar.gz" -C "${install_temp_path}"
+            get_status_message "$?"
+            echo ""
+
+            cd "${install_temp_path}/suricata-${version}" || {
+              echo "[${caller}]: ERROR, could not change directory to ${install_temp_path}"
+              exit 1
+            }
+
+            echo "[${caller}]: Configuring suricata ..."
+            ./configure --libdir=/usr/lib --prefix=/usr/ --sysconfdir=/etc --localstatedir=/var --datarootdir=/usr/share --enable-lua --enable-rust
+            get_status_message "$?"
+            echo ""
+
+            echo "[${caller}]: Building suricata ..."
+            make install-full
+            get_status_message "$?"
+            echo ""
+
+            # Removing suricata temporary files
+            echo "[${caller}]: Removing suricata previous installation temporary files ..."
+            rm -rf "${install_temp_path}"
+            get_status_message "$?"
+            echo ""
+
+            # Writing suricata service file
+            echo "[${caller}]: Writing suricata service file ..."
+            {
+              echo "# Debug level ---> -v: INFO | -vv: INFO+PERF | -vvv: INFO+PERF+CONFIG | -vvvv: INFO+PERF+CONFIG+DEBUG"
+              echo "D - means in daemon | -c means read config | --pidfile <file> means write pidfile on a file"
+              echo ""
+              echo "[Unit]"
+              echo "Description=Suricata IDS/IPS daemon"
+              echo "After=network.target network-online.target"
+              echo "Requires=network-online.target"
+              echo "Documentation=man:suricata(8) man:suricatasc(8)"
+              echo "Documentation=https://suricata-ids.org/docs/"
+              echo ""
+              echo "[Service]"
+              echo "Type=forking"
+              echo "#Environment=LD_PRELOAD=/usr/lib/libtcmalloc_minimal.so.4"
+              echo "PIDFile=/run/suricata.pid"
+              echo "ExecStart=/usr/bin/suricata -vvv -D --af-packet -c /etc/suricata/suricata.yaml --pidfile /run/suricata.pid"
+              echo "ExecReload=/usr/bin/suricatasc -c reload-rules ; /bin/kill -HUP $MAINPID"
+              echo "ExecStop=/usr/bin/suricatasc -c shutdown"
+              echo "Restart=on-failure"
+              echo "#This is too strict we disable it"
+              echo "#ProtectSystem=full"
+              echo "#ProtectHome=true"
+              echo "#ReadWritePaths=/usr/local/maxicode /usr/local/opencode"
+              echo ""
+              echo "[Install]"
+              echo "WantedBy=multi-user.target"
+            } >/etc/systemd/system/suricata.service
+            get_status_message "$?"
+            echo ""
+
+          fi
+
+          echo "[${caller}]: Enabling suricata service ..."
+          systemctl enable suricata.service
+          get_status_message "$?"
+          echo ""
+
+          echo "[${caller}]: Starting suricata service ..."
+          systemctl start suricata.service
+          get_status_message "$?"
+          echo ""
+
+          echo "[${caller}]: Checking suricata service status ..."
+          systemctl status --no-pager suricata.service
+          get_status_message "$?"
+          echo ""
+
+          # Stop suricata service (maxibuild should not run it)
+          echo "[${caller}]: Stopping suricata service ..."
+          systemctl stop suricata.service
+          get_status_message "$?"
+          echo ""
+
+          # TODO add suricata YAML config file
 
         else
-
+          echo "[${caller}]: Installing ${required_cp} from the default repository ..."
           # Do normal distro installation
           if [[ "$(get_distro id)" == +(debian|ubuntu) ]]; then
             apt-get -y install "${required_cp}"
@@ -1279,13 +1516,9 @@ maxibuild() {
           fi
           command -v "${required_cp}" &>/dev/null
           get_status_message "$?"
-
         fi
-
       fi
-
     else
-
       local pkg_status retval
       pkg_status="$(dpkg-query -W --showformat='${db:Status-Status}' "${required_cp}" 2>&1)"
       retval="$?"
