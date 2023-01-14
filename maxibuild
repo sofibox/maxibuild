@@ -2,14 +2,14 @@
 #"=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~="
 # ==================================================
 _APP_SPECIFIC_NAME="Maxibuild"
-_APP_VERSION="0.3.1"
+_APP_VERSION="0.3.2"
 _APP_STATUS="alpha"
 _APP_INFO="${_APP_SPECIFIC_NAME} is a bash script to manage packages."
 _APP_VERSION_STATUS="${_APP_VERSION}-${_APP_STATUS}"
 _AUTHOR="Author: Arafat Ali | Email: arafat@sofibox.com | (C) 2019-2022"
 # ====================================================
 # Usage:
-# maxibuild --include-packages "p1 p2 p3 p4" --include-commands "c1 c2 c3 c4" --force
+# maxibuild --include "p1 p2 p3 p4" --force
 
 # This script is used to update script from a remote repository based on a given path
 # Usage: script_update [script_path]
@@ -385,7 +385,7 @@ maxibuild() {
           # ipcalc --version
           # get_status_message "$?"
           # retval=$?
-
+          echo "[${caller}]: Checking if ipcalc is installed ..."
           command -v "${required_cp}" &>/dev/null
           get_status_message "$?"
 
@@ -429,7 +429,7 @@ maxibuild() {
             #maxipi --version
             #get_status_message "$?"
             #retval=$?
-
+            echo "[${caller}]: Checking if maxipi is installed ..."
             command -v "${required_cp}" &>/dev/null
             get_status_message "$?"
           fi
@@ -493,8 +493,10 @@ maxibuild() {
               echo "[${caller}]: Removing /etc/cron.daily/aide ..."
               rm -fv /etc/cron.daily/aide
               get_status_message "$?"
+              echo ""
             fi
 
+            echo "[${caller}]: Checking if ${required_cp} is installed ..."
             command -v "${required_cp}" &>/dev/null
             get_status_message "$?"
 
@@ -550,6 +552,7 @@ maxibuild() {
             #get_status_message "$?"
             #retval=$?
 
+            echo "[${caller}]: Checking if ${required_cp} is installed ..."
             command -v "${required_cp}" &>/dev/null
             get_status_message "$?"
 
@@ -605,7 +608,7 @@ maxibuild() {
             # maxiperm --version
             # get_status_message "$?"
             # retval=$?
-
+            echo "[${caller}]: Checking if ${required_cp} is installed ..."
             command -v "${required_cp}" &>/dev/null
             get_status_message "$?"
           fi
@@ -660,7 +663,7 @@ maxibuild() {
             # maxida --version
             # get_status_message "$?"
             # retval=$?
-
+            echo "[${caller}]: Checking if ${required_cp} is installed ..."
             command -v "${required_cp}" &>/dev/null
             get_status_message "$?"
           fi
@@ -705,7 +708,7 @@ maxibuild() {
             # dbxcli version
             # get_status_message "$?"
             # retval=$?
-
+            echo "[${caller}]: Checking if ${required_cp} is installed ..."
             command -v "${required_cp}" &>/dev/null
             get_status_message "$?"
           fi
@@ -713,26 +716,32 @@ maxibuild() {
         elif [[ "${required_cp}" == "ip" ]]; then
           [[ "$(get_distro id)" == +(debian|ubuntu) ]] && apt-get -y install iproute2
 
+          echo "[${caller}]: Checking if ${required_cp} is installed ..."
           command -v "${required_cp}" &>/dev/null
           get_status_message "$?"
         elif [[ "${required_cp}" == "pstree" ]]; then
           [[ "$(get_distro id)" == +(debian|ubuntu|centos|almalinux|rockylinux) ]] && apt-get -y install psmisc
 
+          echo "[${caller}]: Checking if ${required_cp} is installed ..."
           command -v "${required_cp}" &>/dev/null
           get_status_message "$?"
         elif [[ "${required_cp}" == +(dig|nslookup) ]]; then
           [[ "$(get_distro id)" == +(debian|ubuntu) ]] && apt-get -y install dnsutils
           [[ "$(get_distro id)" == +(centos|almalinux|rockylinux) ]] && dnf -y install bind-utils
 
+          echo "[${caller}]: Checking if ${required_cp} is installed ..."
           command -v "${required_cp}" &>/dev/null
           get_status_message "$?"
         elif [[ "${required_cp}" == +(netstat) ]]; then
           [[ "$(get_distro id)" == +(debian|ubuntu|centos|almalinux|rockylinux) ]] && apt-get -y install net-tools
 
+          echo "[${caller}]: Checking if ${required_cp} is installed ..."
           command -v "${required_cp}" &>/dev/null
           get_status_message "$?"
         elif [[ "${required_cp}" == +(puttygen) ]]; then
           [[ "$(get_distro id)" == +(debian|ubuntu|centos|almalinux|rockylinux) ]] && apt-get -y install putty-tools
+
+          echo "[${caller}]: Checking if ${required_cp} is installed ..."
           command -v "${required_cp}" &>/dev/null
           get_status_message "$?"
         elif [[ "${required_cp}" == +(grepaddr) ]]; then
@@ -1511,9 +1520,15 @@ maxibuild() {
           # Do normal distro installation
           if [[ "$(get_distro id)" == +(debian|ubuntu) ]]; then
             apt-get -y install "${required_cp}"
+            get_status_message "$?"
+            echo ""
           elif [[ "$(get_distro id)" == +(centos|almalinux|rockylinux) ]]; then
             dnf -y install "${required_cp}"
+            get_status_message "$?"
+            echo ""
           fi
+
+          echo "[${caller}]: Checking ${required_cp} installation ..."
           command -v "${required_cp}" &>/dev/null
           get_status_message "$?"
         fi
