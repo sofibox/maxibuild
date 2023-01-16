@@ -172,6 +172,12 @@ maxibuild() {
 
   local caller required_cps missing_count
 
+  # To avoid error when current path, we must always start from this path
+  cd "${SCRIPT_PATH}" || {
+    echo "Failed to change directory to ${SCRIPT_PATH}"
+    exit 1
+  }
+
   caller="$(basename -- "$0")->${FUNCNAME[0]}"
 
   ((missing_count = 0))
@@ -181,7 +187,7 @@ maxibuild() {
 
   for required_cp in ${required_cps[*]}; do
 
-    if [[ "${required_cp}" == +(mail|linode-cli|ipcalc|maxipi|maxiaide|maxigpg|maxiperm|maxida|dbxcli|ip|pstree|netstat|puttygen|grepaddr|gotify-server|gotify-client|blcheck|wp|wpcli|rclone|yq|suricata_distro|suricata_backport|suricata_v6.0.9|suricata_v7.0.0-beta1) ]]; then
+    if [[ "${required_cp}" == +(mail|linode-cli|ipcalc|maxipi|maxiaide|maxigpg|maxiperm|maxida|dbxcli|ip|pstree|netstat|puttygen|grepaddr|gotify-server|gotify-client|blcheck|wp|wpcli|rclone|yq|suricata_distro|suricata_backport|suricata_v6.0.9|suricata_v7.0.0-beta1|lua) ]]; then
 
       local cmd_status retval
       # Using command to obtain installation status
@@ -434,10 +440,14 @@ maxibuild() {
             get_status_message "$?"
           fi
         elif [[ "${required_cp}" == "maxiaide" ]]; then
+          local maxiaide_bin script_install_path
+          script_install_path="/usr/local/maxicode/maxiaide"
+          maxiaide_bin="${script_install_path}/maxiaide"
+
+          echo "[${caller}]: Removing the old maxiaide directory"
+          rm -rf "${script_install_path}" /usr/local/bin/maxiaide /usr/bin/maxiaide
+
           if [[ "$(get_distro id)" == +(debian|ubuntu) ]]; then
-            local maxiaide_bin script_install_path
-            script_install_path="/usr/local/maxicode/maxiaide"
-            maxiaide_bin="${script_install_path}/maxiaide"
 
             echo "[${caller}]: Removing aide aide-common..."
 
@@ -450,57 +460,71 @@ maxibuild() {
             get_status_message "$?"
             echo ""
 
-            echo "[${caller}]: Removing the old maxiaide directory"
-            rm -rf "${script_install_path}" /usr/local/bin/maxiaide /usr/bin/maxiaide
-
             echo "[${caller}]: Install maxiaide required packages ..."
             apt-get -y install aide
             get_status_message "$?"
             echo ""
+          elif [[ "$(get_distro id)" == +(centos|almalinux) ]]; then
 
-            echo "[${caller}]: Creating an installation directory for maxiaide ..."
-            mkdir -p "${script_install_path}"
+            echo "[${caller}]: Removing aide ..."
+
+            dnf -y remove aide
             get_status_message "$?"
             echo ""
 
-            echo "[${caller}]: Cloning the maxiaide repository ..."
-            git clone https://github.com/sofibox/maxiaide_public.git "${script_install_path}"
+            echo "[${caller}]: Install maxiaide required packages ..."
+            dnf -y install aide
             get_status_message "$?"
             echo ""
 
-            echo "[${caller}]: Giving execution permission to the maxiaide installation script ..."
-            chmod +x ${maxiaide_bin}
-            get_status_message "$?"
-            echo ""
-
-            echo "[${caller}]: Creating a symbolic link to the maxiaide installation script ..."
-            ln -s ${maxiaide_bin} /usr/local/bin
-            get_status_message "$?"
-            echo ""
-
-            echo "[${caller}]: Copying sample config file ..."
-            cp "${script_install_path}/maxiaide.conf.sample" "${script_install_path}/maxiaide.conf"
-            get_status_message "$?"
-            echo ""
-
-            #echo "[${caller}]: Running maxiaide --version  ..."
-            #maxiaide --version
-            #get_status_message "$?"
-            #retval=$?
-
-            # Extra steps for Debian
-            if [ -f /etc/cron.daily/aide ]; then
-              echo "[${caller}]: Removing /etc/cron.daily/aide ..."
-              rm -fv /etc/cron.daily/aide
-              get_status_message "$?"
-              echo ""
-            fi
-
-            echo "[${caller}]: Checking if ${required_cp} is installed ..."
-            command -v "${required_cp}" &>/dev/null
-            get_status_message "$?"
-
+            # TODO make it support next time
+            echo "[${caller}]: Note that maxiaide is not supported on this distribution yet."
+          else
+            echo "[${caller}]: ${required_cp} is not supported on this distribution"
+            exit 1
           fi
+
+          echo "[${caller}]: Creating an installation directory for maxiaide ..."
+          mkdir -p "${script_install_path}"
+          get_status_message "$?"
+          echo ""
+
+          echo "[${caller}]: Cloning the maxiaide repository ..."
+          git clone https://github.com/sofibox/maxiaide_public.git "${script_install_path}"
+          get_status_message "$?"
+          echo ""
+
+          echo "[${caller}]: Giving execution permission to the maxiaide installation script ..."
+          chmod +x ${maxiaide_bin}
+          get_status_message "$?"
+          echo ""
+
+          echo "[${caller}]: Creating a symbolic link to the maxiaide installation script ..."
+          ln -s ${maxiaide_bin} /usr/local/bin
+          get_status_message "$?"
+          echo ""
+
+          echo "[${caller}]: Copying sample config file ..."
+          cp "${script_install_path}/maxiaide.conf.sample" "${script_install_path}/maxiaide.conf"
+          get_status_message "$?"
+          echo ""
+
+          #echo "[${caller}]: Running maxiaide --version  ..."
+          #maxiaide --version
+          #get_status_message "$?"
+          #retval=$?
+
+          # Extra steps for Debian
+          if [ -f /etc/cron.daily/aide ]; then
+            echo "[${caller}]: Removing /etc/cron.daily/aide ..."
+            rm -fv /etc/cron.daily/aide
+            get_status_message "$?"
+            echo ""
+          fi
+
+          echo "[${caller}]: Checking if ${required_cp} is installed ..."
+          command -v "${required_cp}" &>/dev/null
+          get_status_message "$?"
         elif [[ "${required_cp}" == "maxigpg" ]]; then
           if [[ "$(get_distro id)" == +(debian|ubuntu) ]]; then
             local maxigpg_bin script_install_path
@@ -999,7 +1023,7 @@ maxibuild() {
             echo ""
 
             echo "[${caller}]: Checking the status of gotify server systemd service ..."
-            systemctl --no-pager status "${gotify_server_service_name}"
+            systemctl status "${gotify_server_service_name}" | cat
             get_status_message "$?"
             echo ""
 
@@ -1367,6 +1391,18 @@ maxibuild() {
 
             local suricata_download_url install_temp_path="${TEMP_PATH}/suricata_install" version
 
+            # We need to make sure that yq is installed. If not install it
+            if ! command -v yq &>/dev/null; then
+              echo "[${caller}]: Notice, yq is missing. Installing yq ..."
+              FORCE_INSTALL=true INCLUDE_CPS="yq" maxibuild
+            fi
+
+            # We need to make sure that lua is installed. If not install it
+            if ! command -v lua &>/dev/null; then
+              echo "[${caller}]: Notice, lua is missing. Installing lua ..."
+              FORCE_INSTALL=true INCLUDE_CPS="lua" maxibuild
+            fi
+
             if [[ "${required_cp}" == "suricata_v6.0.9" ]]; then
               version="6.0.9"
             elif [[ "${required_cp}" == "suricata_v7.0.0-beta1" ]]; then
@@ -1462,7 +1498,7 @@ maxibuild() {
             echo "[${caller}]: Writing suricata service file ..."
             {
               echo "# Debug level ---> -v: INFO | -vv: INFO+PERF | -vvv: INFO+PERF+CONFIG | -vvvv: INFO+PERF+CONFIG+DEBUG"
-              echo "D - means in daemon | -c means read config | --pidfile <file> means write pidfile on a file"
+              echo "#D - means in daemon | -c means read config | --pidfile <file> means write pidfile on a file"
               echo ""
               echo "[Unit]"
               echo "Description=Suricata IDS/IPS daemon"
@@ -1503,7 +1539,7 @@ maxibuild() {
           echo ""
 
           echo "[${caller}]: Checking suricata service status ..."
-          systemctl status --no-pager suricata.service
+          systemctl status suricata.service | cat
           get_status_message "$?"
           echo ""
 
@@ -1513,7 +1549,143 @@ maxibuild() {
           get_status_message "$?"
           echo ""
 
-          # TODO add suricata YAML config file
+          # Enabling suricata 3rd party rules
+          echo "[${caller}]: Enabling suricata oisf/trafficid ..."
+          suricata-update enable-source oisf/trafficid
+          get_status_message "$?"
+          echo ""
+
+          echo "[${caller}]: Enabling suricata sslbl/ssl-fp-blacklist ..."
+          suricata-update enable-source sslbl/ssl-fp-blacklist
+          get_status_message "$?"
+          echo ""
+
+          echo "[${caller}]: Enabling suricata sslbl/ja3-fingerprints ..."
+          suricata-update enable-source sslbl/ja3-fingerprints
+          get_status_message "$?"
+          echo ""
+
+          echo "[${caller}]: Enabling suricata et/open ..."
+          suricata-update enable-source et/open
+          get_status_message "$?"
+          echo ""
+
+          echo "[${caller}]: Enabling suricata etnetera/aggressive ..."
+          suricata-update enable-source etnetera/aggressive
+          get_status_message "$?"
+          echo ""
+
+          # Update suricata sources
+          echo "[${caller}]: Updating suricata sources ..."
+          suricata-update update-sources
+          get_status_message "$?"
+          echo ""
+
+          echo "[${caller}]: Updating suricata rules ..."
+          suricata-update
+          get_status_message "$?"
+          echo ""
+
+          # Start suricata service
+
+          echo "[${caller}]: Starting suricata service ..."
+          systemctl start suricata.service
+          get_status_message "$?"
+          echo ""
+
+        elif [[ "${required_cp}" == +(lua) ]]; then
+          if [[ "$(get_distro id)" == +(debian|ubuntu) ]]; then
+            local lua_installed_versions lua_latest_web_version install_temp_path
+
+            install_temp_path="${TEMP_PATH}/lua_install"
+            echo "[${caller}]: Removing installation files manually ..."
+            rm -rf /etc/alternatives/lua-compiler /etc/alternatives/lua-compiler-manual /etc/alternatives/lua-interpreter \
+              /etc/alternatives/lua-manual /usr/bin/lua /usr/bin/luac /usr/share/man/man1/lua.1.gz /usr/share/man/man1/luac.1.gz \
+              /var/lib/dpkg/alternatives/lua-compiler /var/lib/dpkg/alternatives/lua-interpreter \
+              /usr/local/bin/lua /usr/local/bin/luac /usr/local/include/lauxlib.h /usr/local/include/lua.h \
+              /usr/local/include/lua.hpp /usr/local/include/luaconf.h /usr/local/include/lualib.h /usr/local/lib/liblua.a \
+              /usr/local/lib/lua /usr/local/share/lua /usr/local/share/man/man1/lua.1 /usr/local/share/man/man1/luac.1
+
+            get_status_message "$?"
+            echo ""
+            # These are common suricata versions for debian/ubuntu
+            lua_installed_versions=(5.4 5.3 5.2 5.1)
+
+            for i in "${lua_installed_versions[@]}"; do
+              echo "[${caller}]: Removing lua${i} installation using apt-get ..."
+              apt-get remove -y "lua${i}"
+              get_status_message "$?"
+              echo ""
+
+              # If lua is not installed using distro we manually remove all the lua files
+
+              echo "[${caller}]: Removing other lua installation files ..."
+              rm -rf "/usr/bin/lua${i}" "/usr/bin/luac${i}" "/usr/share/doc/lua${i}" "/usr/share/man/man1/lua${i}.1.gz" \
+                "/usr/share/man/man1/luac${i}.1.gz" "/var/lib/dpkg/info/lua${i}.list" "/var/lib/dpkg/info/lua${i}.md5sums" \
+                "/var/lib/dpkg/info/lua${i}.postinst" "/var/lib/dpkg/info/lua${i}.prerm" "/usr/local/lib/lua/${i}" \
+                "/usr/local/share/lua/${i}"
+              get_status_message "$?"
+              echo ""
+
+            done
+
+            echo "[${caller}]: Installing development tools ..."
+            apt-get install -y build-essential libreadline-dev
+            get_status_message "$?"
+            echo ""
+
+            echo "[${caller}]: Getting lua latest version from web ..."
+
+            lua_latest_web_version="$(curl -sL https://www.lua.org/ftp/ | grep -Eo 'HREF="lua-[0-9]+\.[0-9]+\.[0-9]+.tar.gz' | sort -V | tail -n1 | cut -d'-' -f2 | grep -Eo '[0-9]\.[0-9]\.[0-9]+')"
+            if [ -z "${lua_latest_web_version}" ]; then
+              echo "[${caller}]: Unable to get lua latest version from web"
+              exit 1
+            fi
+
+            echo "[${caller}]: Lua latest version is ${lua_latest_web_version}"
+            echo ""
+
+            echo "[${caller}]: Removing lua previous installation temporary files ..."
+            rm -rf "${install_temp_path}"
+            get_status_message "$?"
+            echo ""
+
+            echo "[${caller}]: Creating lua temporary installation path ..."
+            mkdir -p "${install_temp_path}"
+            get_status_message "$?"
+            echo ""
+
+            cd "${install_temp_path}" || {
+              echo "[${caller}]: Unable to change directory to ${install_temp_path}"
+              exit 1
+            }
+
+            echo "[${caller}]: Downloading lua ${lua_latest_web_version} ..."
+            curl -R -O "https://www.lua.org/ftp/lua-${lua_latest_web_version}.tar.gz"
+            get_status_message "$?"
+            echo ""
+
+            echo "[${caller}]: Extracting lua ${lua_latest_web_version} ..."
+            tar zxf "lua-${lua_latest_web_version}.tar.gz"
+            get_status_message "$?"
+            echo ""
+
+            cd "lua-${lua_latest_web_version}" || {
+              echo "[${caller}]: Unable to change directory to ${install_temp_path}/lua-${lua_latest_web_version}"
+              exit 1
+            }
+
+            echo "[${caller}]: Running make linux test ..."
+            make linux test
+            get_status_message "$?"
+            echo ""
+
+            echo "[${caller}]: Running make install ..."
+            make install
+            get_status_message "$?"
+            echo ""
+
+          fi
 
         else
           echo "[${caller}]: Installing ${required_cp} from the default repository ..."
@@ -1655,6 +1827,10 @@ while [ "$#" -gt 0 ]; do
     ;;
   editself | edit-script | edit)
     nano -c "${SCRIPT_PATH}/${SCRIPT_NAME}"
+    exit $?
+    ;;
+  test)
+    echo "ok?"
     exit $?
     ;;
   --)
