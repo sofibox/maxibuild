@@ -2,7 +2,7 @@
 #"=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~="
 # ==================================================
 _APP_SPECIFIC_NAME="Maxibuild"
-_APP_VERSION="0.3.2"
+_APP_VERSION="0.3.3"
 _APP_STATUS="alpha"
 _APP_INFO="${_APP_SPECIFIC_NAME} is a bash script to manage packages."
 _APP_VERSION_STATUS="${_APP_VERSION}-${_APP_STATUS}"
@@ -187,7 +187,7 @@ maxibuild() {
 
   for required_cp in ${required_cps[*]}; do
 
-    if [[ "${required_cp}" == +(mail|linode-cli|ipcalc|maxipi|maxiaide|maxigpg|maxiperm|maxida|dbxcli|ip|pstree|netstat|puttygen|grepaddr|gotify-server|gotify-client|blcheck|wp|wpcli|rclone|yq|suricata_distro|suricata_backport|suricata_v6.0.9|suricata_v7.0.0-beta1|lua) ]]; then
+    if [[ "${required_cp}" == +(mail|linode-cli|ipcalc|maxipi|maxiaide|maxigpg|maxiperm|maxida|dbxcli|ip|pstree|netstat|puttygen|grepaddr|gotify-server|gotify-client|blcheck|wp|wpcli|rclone|yq|suricata_distro|suricata_backport|suricata|suricata_v6.0.9|suricata_v7.0.0-beta1|lua|aipdb) ]]; then
 
       local cmd_status retval
       # Using command to obtain installation status
@@ -195,7 +195,7 @@ maxibuild() {
       cmd_status="$?"
 
       # START Special case
-      if [[ "${required_cp}" == +(suricata_distro|suricata_backport|suricata_v6.0.9|suricata_v7.0.0-beta1) ]]; then
+      if [[ "${required_cp}" == +(suricata|suricata_distro|suricata_backport|suricata_v6.0.9|suricata_v7.0.0-beta1) ]]; then
         if command -v suricata &>/dev/null; then
           echo "[${caller}]: Suricata is already installed. Use --force to force install ${required_cp}"
           cmd_status=0
@@ -1310,7 +1310,7 @@ maxibuild() {
             fi
 
           fi
-        elif [[ "${required_cp}" == +(suricata_distro|suricata_backport|suricata_v6.0.9|suricata_v7.0.0-beta1) ]]; then
+        elif [[ "${required_cp}" == +(suricata|suricata_distro|suricata_backport|suricata_v6.0.9|suricata_v7.0.0-beta1) ]]; then
 
           echo "[${caller}]: Removing apt source list backports for suricata ..."
           sed -i "/deb http:\/\/deb.debian.org\/debian .*.-backports main/d" /etc/apt/sources.list
@@ -1387,7 +1387,7 @@ maxibuild() {
               echo "[${caller}]: ERROR, suricata backport installation is not available (or implemented) for $(get_distro codename)"
             fi
           # Manual version - As Jan 14 2023, the latest version is v6.0.9 STABLE and v.7.0.0 BETA 1
-          elif [[ "${required_cp}" == +(suricata_v6.0.9|suricata_v7.0.0-beta1) ]]; then
+          elif [[ "${required_cp}" == +(suricata|suricata_v6.0.9|suricata_v7.0.0-beta1) ]]; then
 
             local suricata_download_url install_temp_path="${TEMP_PATH}/suricata_install" version
 
@@ -1403,7 +1403,15 @@ maxibuild() {
               FORCE_INSTALL=true INCLUDE_CPS="lua" maxibuild
             fi
 
-            if [[ "${required_cp}" == "suricata_v6.0.9" ]]; then
+            # Get suricata latest version number without the v prefix
+
+            if [[ "${required_cp}" == "suricata" ]]; then
+              version="$(curl -sL https://api.github.com/repos/OISF/suricata/releases/latest | yq -r '.tag_name' | sed 's/^suricata-//')"
+              if [[ -z "${version}" ]]; then
+                echo "[${caller}]: ERROR, unable to get suricata latest version number"
+                exit 1
+              fi
+            elif [[ "${required_cp}" == "suricata_v6.0.9" ]]; then
               version="6.0.9"
             elif [[ "${required_cp}" == "suricata_v7.0.0-beta1" ]]; then
               version="7.0.0-beta1"
@@ -1493,6 +1501,18 @@ maxibuild() {
             rm -rf "${install_temp_path}"
             get_status_message "$?"
             echo ""
+
+            # Make sure that the suricata configuration file is present
+            # Normally it will be at /etc/suricata/suricata.yaml after installation
+            if [[ ! -f /etc/suricata/suricata.yaml ]]; then
+              echo "[${caller}]: Warning suricata configuration file is missing!"
+              exit 1
+            fi
+
+            # Modify suricata configuration file
+            echo "[${caller}]: Modifying suricata configuration file ..."
+            #yq
+            # TODO pending
 
             # Writing suricata service file
             echo "[${caller}]: Writing suricata service file ..."
@@ -1592,8 +1612,26 @@ maxibuild() {
           systemctl start suricata.service
           get_status_message "$?"
           echo ""
+        elif [[ "${required_cp}" == +(maxiwall) ]]; then
+          if [[ "$(get_distro id)" == +(debian|ubuntu) ]]; then
+            local maxiwall_bin install_temp_path
+            install_temp_path="/usr/local/maxicode/maxiwall"
+            maxiwall_bin="${install_temp_path}/maxiwall"
 
-        elif [[ "${required_cp}" == +(lua) ]]; then
+            # Make sure suricata is installed, if not we install it
+            if ! command -v suricata &>/dev/null; then
+              echo "[${caller}]: Installing suricata ..."
+              echo "[${caller}]: Notice, suricata is missing. Installing suricata ..."
+              FORCE_INSTALL=true INCLUDE_CPS="suricata" maxibuild
+            fi
+
+            # TODO pending
+
+          fi
+
+        elif
+          [[ "${required_cp}" == +(lua) ]]
+        then
           if [[ "$(get_distro id)" == +(debian|ubuntu) ]]; then
             local lua_installed_versions lua_latest_web_version install_temp_path
 
@@ -1684,6 +1722,49 @@ maxibuild() {
             make install
             get_status_message "$?"
             echo ""
+
+          fi
+        elif [[ "${required_cp}" == +(aipdb) ]]; then
+          if [[ "$(get_distro id)" == +(debian|ubuntu|centos|almalinux|rockylinux) ]]; then
+
+            local aipdb_bin script_install_path
+
+            script_install_path="/usr/local/opencode/aipdb"
+            aipdb_bin="${script_install_path}/aipdb"
+
+            echo "[${caller}]: Removing the old aipdb installation"
+            rm -rf "${script_install_path}" "/usr/local/bin/aipdb" "/usr/bin/aipdb"
+            get_status_message "$?"
+            echo ""
+
+            echo "[${caller}]: Creating an installation directory for aipdb ..."
+            mkdir -p "${script_install_path}"
+            get_status_message "$?"
+            echo ""
+
+            echo "[${caller}]: Cloning the aipdb repository ..."
+            git clone https://github.com/sofibox/aipdb.git "${script_install_path}"
+            get_status_message "$?"
+            echo ""
+
+            # Change directory to script_install_path, if failed then exit with a message
+            cd "${script_install_path}" || {
+              echo "Failed to change directory to ${script_install_path}"
+              exit 1
+            }
+
+            echo "[${caller}]: Giving execute permission to aipdb ..."
+            chmod +x ${aipdb_bin}
+            get_status_message "$?"
+            echo ""
+
+            echo "[${caller}]: Creating a symbolic link for aipdb ..."
+            ln -s "${aipdb_bin}" "/usr/local/bin"
+            get_status_message "$?"
+
+            echo "[${caller}]: Checking whether aipdb command is available ..."
+            command -v aipdb &>/dev/null
+            get_status_message "$?"
 
           fi
 
