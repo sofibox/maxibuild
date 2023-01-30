@@ -2,7 +2,7 @@
 #"=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~="
 # ==================================================
 _APP_SPECIFIC_NAME="Maxibuild"
-_APP_VERSION="0.3.3"
+_APP_VERSION="0.3.4"
 _APP_STATUS="alpha"
 _APP_INFO="${_APP_SPECIFIC_NAME} is a bash script to manage packages."
 _APP_VERSION_STATUS="${_APP_VERSION}-${_APP_STATUS}"
@@ -187,7 +187,7 @@ maxibuild() {
 
   for required_cp in ${required_cps[*]}; do
 
-    if [[ "${required_cp}" == +(mail|linode-cli|ipcalc|maxipi|maxiaide|maxigpg|maxiperm|maxida|dbxcli|ip|pstree|netstat|puttygen|grepaddr|gotify-server|gotify-client|blcheck|wp|wpcli|rclone|yq|suricata_distro|suricata_backport|suricata|suricata_v6.0.9|suricata_v7.0.0-beta1|lua|aipdb) ]]; then
+    if [[ "${required_cp}" == +(mail|linode-cli|ipcalc|maxipi|maxiaide|maxigpg|maxiperm|maxida|dbxcli|ip|pstree|netstat|puttygen|grepaddr|gotify-server|gotify-client|blcheck|wp|wpcli|rclone|yq|suricata_distro|suricata_backport|suricata|suricata_v6.0.9|suricata_v7.0.0-beta1|lua|aipdb|greynoise) ]]; then
 
       local cmd_status retval
       # Using command to obtain installation status
@@ -1764,6 +1764,49 @@ maxibuild() {
 
             echo "[${caller}]: Checking whether aipdb command is available ..."
             command -v aipdb &>/dev/null
+            get_status_message "$?"
+
+          fi
+        elif [[ "${required_cp}" == +(greynoise) ]]; then
+          if [[ "$(get_distro id)" == +(debian|ubuntu|centos|almalinux|rockylinux) ]]; then
+
+            local greynoise_bin script_install_path
+
+            script_install_path="/usr/local/opencode/greynoise"
+            greynoise_bin="${script_install_path}/greynoise"
+
+            echo "[${caller}]: Removing the old greynoise installation"
+            rm -rf "${script_install_path}" "/usr/local/bin/greynoise" "/usr/bin/greynoise"
+            get_status_message "$?"
+            echo ""
+
+            echo "[${caller}]: Creating an installation directory for greynoise ..."
+            mkdir -p "${script_install_path}"
+            get_status_message "$?"
+            echo ""
+
+            echo "[${caller}]: Cloning the greynoise repository ..."
+            git clone https://github.com/sofibox/greynoise.git "${script_install_path}"
+            get_status_message "$?"
+            echo ""
+
+            # Change directory to script_install_path, if failed then exit with a message
+            cd "${script_install_path}" || {
+              echo "Failed to change directory to ${script_install_path}"
+              exit 1
+            }
+
+            echo "[${caller}]: Giving execute permission to greynoise ..."
+            chmod +x ${greynoise_bin}
+            get_status_message "$?"
+            echo ""
+
+            echo "[${caller}]: Creating a symbolic link for greynoise ..."
+            ln -s "${greynoise_bin}" "/usr/local/bin"
+            get_status_message "$?"
+
+            echo "[${caller}]: Checking whether greynoise command is available ..."
+            command -v greynoise &>/dev/null
             get_status_message "$?"
 
           fi
