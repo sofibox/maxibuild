@@ -2,11 +2,11 @@
 #"=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~="
 # ==================================================
 _APP_SPECIFIC_NAME="Maxibuild"
-_APP_VERSION="0.3.4"
+_APP_VERSION="0.3.5"
 _APP_STATUS="alpha"
 _APP_INFO="${_APP_SPECIFIC_NAME} is a bash script to manage packages."
 _APP_VERSION_STATUS="${_APP_VERSION}-${_APP_STATUS}"
-_AUTHOR="Author: Arafat Ali | Email: arafat@sofibox.com | (C) 2019-2022"
+_AUTHOR="Author: Arafat Ali | Email: arafat@sofibox.com | (C) 2019-2023"
 # ====================================================
 # Usage:
 # maxibuild --include "p1 p2 p3 p4" --force
@@ -187,7 +187,7 @@ maxibuild() {
 
   for required_cp in ${required_cps[*]}; do
 
-    if [[ "${required_cp}" == +(mail|linode-cli|ipcalc|maxipi|maxiaide|maxigpg|maxiperm|maxida|dbxcli|ip|pstree|netstat|puttygen|grepaddr|gotify-server|gotify-client|blcheck|wp|wpcli|rclone|yq|suricata_distro|suricata_backport|suricata|suricata_v6.0.9|suricata_v7.0.0-beta1|lua|aipdb|greynoise) ]]; then
+    if [[ "${required_cp}" == +(mail|linode-cli|ipcalc|maxipi|maxiaide|maxigpg|maxiperm|maxida|maxilog|dbxcli|ip|pstree|netstat|puttygen|grepaddr|gotify-server|gotify-client|blcheck|wp|wpcli|rclone|yq|suricata_distro|suricata_backport|suricata|suricata_v6.0.9|suricata_v7.0.0-beta1|lua|aipdb|greynoise|virustotal) ]]; then
 
       local cmd_status retval
       # Using command to obtain installation status
@@ -691,6 +691,50 @@ maxibuild() {
             command -v "${required_cp}" &>/dev/null
             get_status_message "$?"
           fi
+        elif [[ "${required_cp}" == "maxilog" ]]; then
+          if [[ "$(get_distro id)" == +(debian|ubuntu) ]]; then
+            local maxilog_bin script_install_path
+            script_install_path="/usr/local/maxicode/maxilog"
+            maxilog_bin="${script_install_path}/maxilog"
+
+            echo "[${caller}]: Removing the old maxilog directory"
+            rm -rf "${script_install_path}" /usr/local/bin/maxilog /usr/bin/maxilog
+            get_status_message "$?"
+            echo ""
+
+            echo "[${caller}]: Creating an installation directory for maxilog ..."
+            mkdir -p "${script_install_path}"
+            get_status_message "$?"
+            echo ""
+
+            echo "[${caller}]: Cloning the maxilog repository ..."
+            git clone https://github.com/sofibox/maxilog_public.git "${script_install_path}"
+            get_status_message "$?"
+            echo ""
+
+            echo "[${caller}]: Giving execution permission to the maxilog installation script ..."
+            chmod +x ${maxilog_bin}
+            get_status_message "$?"
+
+            echo "[${caller}]: Creating a symbolic link to the maxilog installation script ..."
+            ln -s ${maxilog_bin} /usr/local/bin
+            get_status_message "$?"
+            echo ""
+
+            echo "[${caller}]: Copying sample config file ..."
+            cp "${script_install_path}/maxilog.conf.sample" "${script_install_path}/maxilog.conf"
+            get_status_message "$?"
+
+            echo "[${caller}]: Copying sample log_list.json file ..."
+            cp "${script_install_path}/log_list.json.sample" "${script_install_path}/log_list.json"
+            get_status_message "$?"
+            echo ""
+
+            echo "[${caller}]: Checking if ${required_cp} is installed ..."
+            command -v "${required_cp}" &>/dev/null
+            get_status_message "$?"
+          fi
+
         elif [ "${required_cp}" == "dbxcli" ]; then
           if [[ "$(get_distro id)" == +(debian|ubuntu) ]]; then
             local dbxcli_bin script_install_path
@@ -1811,6 +1855,46 @@ maxibuild() {
 
           fi
 
+        elif
+          [[ "${required_cp}" == +(virustotal) ]]
+        then
+          if [[ "$(get_distro id)" == +(debian|ubuntu|centos|almalinux|rockylinux) ]]; then
+
+            local virustotal_bin script_install_path
+
+            script_install_path="/usr/local/opencode/virustotal"
+            virustotal_bin="${script_install_path}/virustotal"
+
+            echo "[${caller}]: Removing the old virustotal installation"
+            rm -rf "${script_install_path}" "/usr/local/bin/virustotal" "/usr/bin/virustotal"
+            get_status_message "$?"
+            echo ""
+
+            echo "[${caller}]: Creating an installation directory for virustotal ..."
+            mkdir -p "${script_install_path}"
+            get_status_message "$?"
+            echo ""
+
+            echo "[${caller}]: Cloning the virustotal repository ..."
+            git clone https://github.com/sofibox/virustotal.git "${script_install_path}"
+            get_status_message "$?"
+            echo ""
+
+            # Change directory to script_install_path, if failed then exit with a message
+            cd "${script_install_path}" || {
+              echo "Failed to change directory to ${script_install_path}"
+              exit 1
+            }
+
+            echo "[${caller}]: Giving execute permission to virustotal ..."
+            chmod +x ${virustotal_bin}
+            get_status_message "$?"
+            echo ""
+
+            echo "[${caller}]: Creating a symbolic link for virustotal ..."
+            ln -s "${virustotal_bin}" "/usr/local/bin"
+            get_status_message "$?"
+          fi
         else
           echo "[${caller}]: Installing ${required_cp} from the default repository ..."
           # Do normal distro installation
