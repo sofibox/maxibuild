@@ -2,7 +2,7 @@
 #"=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~="
 # ==================================================
 _APP_SPECIFIC_NAME="Maxibuild"
-_APP_VERSION="0.3.5"
+_APP_VERSION="0.3.7"
 _APP_STATUS="alpha"
 _APP_INFO="${_APP_SPECIFIC_NAME} is a bash script to manage packages."
 _APP_VERSION_STATUS="${_APP_VERSION}-${_APP_STATUS}"
@@ -14,6 +14,11 @@ _AUTHOR="Author: Arafat Ali | Email: arafat@sofibox.com | (C) 2019-2023"
 # This script is used to update script from a remote repository based on a given path
 # Usage: script_update [script_path]
 # Example: script_update /opt/maxigpg_public/
+
+# ================ shell config ====================
+shopt -s extglob
+# ================ shell config ====================
+
 script_update() {
   local script_name script_path caller script_install_path current_configs new_configs
 
@@ -81,7 +86,7 @@ check_update() {
   temp_file="${TEMP_PATH}/${script_name}"
   # The github raw hosting will not be updated immediately after I push the update to github. Need to wait about 5 minutes
   if ! command -v curl &>/dev/null; then
-    [[ "$(get_distro id)" == +(debian|ubuntu|centos|almalinux|rhel) ]] && apt-get install -y curl
+    [[ "$(get_distro id)" == @(debian|ubuntu|centos|almalinux|rhel) ]] && apt-get install -y curl
   fi
   curl -H 'Cache-Control: no-cache' -so "${temp_file}" "https://raw.githubusercontent.com/sofibox/${script_name}_public/main/${script_name}"
   get_status_message "$?"
@@ -186,8 +191,9 @@ maxibuild() {
   read -ra required_cps <<<"$(echo "${INCLUDE_CPS}" | tr ',' ' ' | tr -d '"')"
 
   for required_cp in ${required_cps[*]}; do
-
-    if [[ "${required_cp}" == +(mail|linode-cli|ipcalc|maxipi|maxiaide|maxigpg|maxiperm|maxida|maxilog|dbxcli|ip|pstree|netstat|puttygen|grepaddr|gotify-server|gotify-client|blcheck|wp|wpcli|rclone|yq|suricata_distro|suricata_backport|suricata|suricata_v6.0.9|suricata_v7.0.0-beta1|lua|aipdb|greynoise|virustotal) ]]; then
+    # If the required package is a special command, we list it here
+    # For example `puttygen` is a command and its package name is `putty-tools`. So if we want to install putty-tools, we can use `puttygen` as the command to install
+    if [[ "${required_cp}" == @(mail|linode-cli|ipcalc|maxipi|maxiaide|maxigpg|maxiperm|maxida|maxilog|dbxcli|ip|pstree|netstat|puttygen|grepaddr|gotify-server|gotify-client|blcheck|wp|wpcli|rclone|yq|suricata_distro|suricata_backport|suricata|suricata_v6.0.9|suricata_v6.0.10|suricata_v7.0.0-rc1|lua|aipdb|greynoise|virustotal) ]]; then
 
       local cmd_status retval
       # Using command to obtain installation status
@@ -195,7 +201,7 @@ maxibuild() {
       cmd_status="$?"
 
       # START Special case
-      if [[ "${required_cp}" == +(suricata|suricata_distro|suricata_backport|suricata_v6.0.9|suricata_v7.0.0-beta1) ]]; then
+      if [[ "${required_cp}" == @(suricata|suricata_distro|suricata_backport|suricata_v6.0.9|suricata_v6.0.10|suricata_v7.0.0-rc1) ]]; then
         if command -v suricata &>/dev/null; then
           echo "[${caller}]: Suricata is already installed. Use --force to force install ${required_cp}"
           cmd_status=0
@@ -222,9 +228,9 @@ maxibuild() {
 
         if [[ "${missing_count}" -eq 1 ]]; then
           echo "[${caller}]: Running system update for the first missing command ..."
-          if [[ "$(get_distro id)" == +(debian|ubuntu) ]]; then
+          if [[ "$(get_distro id)" == @(debian|ubuntu) ]]; then
             apt-get -qq -y update
-          elif [[ "$(get_distro id)" == +(centos|fedora|rhel|almalinux|rocklylinux) ]]; then
+          elif [[ "$(get_distro id)" == @(centos|fedora|rhel|almalinux|rocklylinux) ]]; then
             dnf -q -y update
           fi
           get_status_message "$?"
@@ -235,9 +241,9 @@ maxibuild() {
             echo "[${caller}]: Warning, git is missing!"
             echo ""
             echo "[${caller}]: Installing git ..."
-            if [[ "$(get_distro id)" == +(debian|ubuntu) ]]; then
+            if [[ "$(get_distro id)" == @(debian|ubuntu) ]]; then
               apt-get -qq -y install git
-            elif [[ "$(get_distro id)" == +(centos|fedora|rhel|almalinux|rocklylinux) ]]; then
+            elif [[ "$(get_distro id)" == @(centos|fedora|rhel|almalinux|rocklylinux) ]]; then
               dnf -q -y install git
             fi
             get_status_message "$?"
@@ -249,9 +255,9 @@ maxibuild() {
             echo "[${caller}]: Warning, curl is missing!"
             echo ""
             echo "[${caller}]: Installing curl ..."
-            if [[ "$(get_distro id)" == +(debian|ubuntu) ]]; then
+            if [[ "$(get_distro id)" == @(debian|ubuntu) ]]; then
               apt-get -qq -y install curl
-            elif [[ "$(get_distro id)" == +(centos|fedora|rhel|almalinux|rocklylinux) ]]; then
+            elif [[ "$(get_distro id)" == @(centos|fedora|rhel|almalinux|rocklylinux) ]]; then
               dnf -q -y install curl
             fi
             get_status_message "$?"
@@ -263,9 +269,9 @@ maxibuild() {
             echo "[${caller}]: Warning, wget is missing!"
             echo ""
             echo "[${caller}]: Installing wget ..."
-            if [[ "$(get_distro id)" == +(debian|ubuntu) ]]; then
+            if [[ "$(get_distro id)" == @(debian|ubuntu) ]]; then
               apt-get -qq -y install wget
-            elif [[ "$(get_distro id)" == +(centos|fedora|rhel|almalinux|rocklylinux) ]]; then
+            elif [[ "$(get_distro id)" == @(centos|fedora|rhel|almalinux|rocklylinux) ]]; then
               dnf -q -y install wget
             fi
             get_status_message "$?"
@@ -277,9 +283,9 @@ maxibuild() {
             echo "[${caller}]: Warning, unzip is missing!"
             echo ""
             echo "[${caller}]: Installing unzip ..."
-            if [[ "$(get_distro id)" == +(debian|ubuntu) ]]; then
+            if [[ "$(get_distro id)" == @(debian|ubuntu) ]]; then
               apt-get -qq -y install unzip
-            elif [[ "$(get_distro id)" == +(centos|fedora|rhel|almalinux|rocklylinux) ]]; then
+            elif [[ "$(get_distro id)" == @(centos|fedora|rhel|almalinux|rocklylinux) ]]; then
               dnf -q -y install unzip
             fi
             get_status_message "$?"
@@ -291,9 +297,9 @@ maxibuild() {
             echo "[${caller}]: Warning, tar is missing!"
             echo ""
             echo "[${caller}]: Installing tar ..."
-            if [[ "$(get_distro id)" == +(debian|ubuntu) ]]; then
+            if [[ "$(get_distro id)" == @(debian|ubuntu) ]]; then
               apt-get -qq -y install tar
-            elif [[ "$(get_distro id)" == +(centos|fedora|rhel|almalinux|rocklylinux) ]]; then
+            elif [[ "$(get_distro id)" == @(centos|fedora|rhel|almalinux|rocklylinux) ]]; then
               dnf -q -y install tar
             fi
             get_status_message "$?"
@@ -305,32 +311,32 @@ maxibuild() {
         echo ""
 
         # Package installation condition here
-        if [[ "${required_cp}" == +(mail) ]]; then
-          if [[ "$(get_distro id)" == +(debian|ubuntu) ]]; then
+        if [[ "${required_cp}" == @(mail) ]]; then
+          if [[ "$(get_distro id)" == @(debian|ubuntu) ]]; then
             apt-get -y install bsd-mailx
-          elif [[ "$(get_distro id)" == +(centos|almalinux|rockylinux) ]]; then
+          elif [[ "$(get_distro id)" == @(centos|almalinux|rockylinux) ]]; then
             apt-get -y install mail-utils
           fi
           get_status_message "$?"
           echo ""
-        elif [[ "${required_cp}" == +(linode-cli) ]]; then
+        elif [[ "${required_cp}" == @(linode-cli) ]]; then
 
-          if [[ "$(get_distro id)" == +(debian|ubuntu) ]]; then
+          if [[ "$(get_distro id)" == @(debian|ubuntu) ]]; then
             apt-get -y install python3-pip
-          elif [[ "$(get_distro id)" == +(centos|almalinux|rockylinux) ]]; then
+          elif [[ "$(get_distro id)" == @(centos|almalinux|rockylinux) ]]; then
             dnf -y install python3-pip
           fi
           pip3 install linode-cli --upgrade
-        elif [[ "${required_cp}" == +(ipcalc) ]]; then
+        elif [[ "${required_cp}" == @(ipcalc) ]]; then
 
           local ipcalc_bin script_install_path
           script_install_path="/usr/local/opencode/ipcalc"
           ipcalc_bin="${script_install_path}/build/ipcalc"
 
           echo "[${caller}]: Removing the old ipcalc installation ..."
-          if [[ "$(get_distro id)" == +(debian|ubuntu) ]]; then
+          if [[ "$(get_distro id)" == @(debian|ubuntu) ]]; then
             apt-get -y remove ipcalc
-          elif [[ "$(get_distro id)" == +(centos|almalinux|rockylinux) ]]; then
+          elif [[ "$(get_distro id)" == @(centos|almalinux|rockylinux) ]]; then
             dnf -y remove ipcalc
           fi
 
@@ -396,7 +402,7 @@ maxibuild() {
           get_status_message "$?"
 
         elif [ "${required_cp}" == "maxipi" ]; then
-          if [[ "$(get_distro id)" == +(debian|ubuntu|centos|almalinux) ]]; then
+          if [[ "$(get_distro id)" == @(debian|ubuntu|centos|almalinux) ]]; then
             local maxipi_bin script_install_path
             script_install_path="/usr/local/maxicode/maxipi"
             maxipi_bin="${script_install_path}/maxipi"
@@ -447,7 +453,7 @@ maxibuild() {
           echo "[${caller}]: Removing the old maxiaide directory"
           rm -rf "${script_install_path}" /usr/local/bin/maxiaide /usr/bin/maxiaide
 
-          if [[ "$(get_distro id)" == +(debian|ubuntu) ]]; then
+          if [[ "$(get_distro id)" == @(debian|ubuntu) ]]; then
 
             echo "[${caller}]: Removing aide aide-common..."
 
@@ -464,7 +470,7 @@ maxibuild() {
             apt-get -y install aide
             get_status_message "$?"
             echo ""
-          elif [[ "$(get_distro id)" == +(centos|almalinux) ]]; then
+          elif [[ "$(get_distro id)" == @(centos|almalinux) ]]; then
 
             echo "[${caller}]: Removing aide ..."
 
@@ -526,7 +532,7 @@ maxibuild() {
           command -v "${required_cp}" &>/dev/null
           get_status_message "$?"
         elif [[ "${required_cp}" == "maxigpg" ]]; then
-          if [[ "$(get_distro id)" == +(debian|ubuntu) ]]; then
+          if [[ "$(get_distro id)" == @(debian|ubuntu) ]]; then
             local maxigpg_bin script_install_path
             script_install_path="/usr/local/maxicode/maxigpg"
             maxigpg_bin="${script_install_path}/maxigpg"
@@ -582,7 +588,7 @@ maxibuild() {
 
           fi
         elif [[ "${required_cp}" == "maxiperm" ]]; then
-          if [[ "$(get_distro id)" == +(debian|ubuntu) ]]; then
+          if [[ "$(get_distro id)" == @(debian|ubuntu) ]]; then
             local maxiperm_bin perm_bin script_install_path
             script_install_path="/usr/local/maxicode/maxiperm"
             maxiperm_bin="${script_install_path}/maxiperm"
@@ -637,7 +643,7 @@ maxibuild() {
             get_status_message "$?"
           fi
         elif [[ "${required_cp}" == "maxida" ]]; then
-          if [[ "$(get_distro id)" == +(debian|ubuntu) ]]; then
+          if [[ "$(get_distro id)" == @(debian|ubuntu) ]]; then
             local maxida_bin dacli_bin script_install_path
             script_install_path="/usr/local/maxicode/maxida"
             maxida_bin="${script_install_path}/maxida"
@@ -692,7 +698,7 @@ maxibuild() {
             get_status_message "$?"
           fi
         elif [[ "${required_cp}" == "maxilog" ]]; then
-          if [[ "$(get_distro id)" == +(debian|ubuntu) ]]; then
+          if [[ "$(get_distro id)" == @(debian|ubuntu) ]]; then
             local maxilog_bin script_install_path
             script_install_path="/usr/local/maxicode/maxilog"
             maxilog_bin="${script_install_path}/maxilog"
@@ -736,7 +742,7 @@ maxibuild() {
           fi
 
         elif [ "${required_cp}" == "dbxcli" ]; then
-          if [[ "$(get_distro id)" == +(debian|ubuntu) ]]; then
+          if [[ "$(get_distro id)" == @(debian|ubuntu) ]]; then
             local dbxcli_bin script_install_path
             script_install_path="/usr/local/opencode/dbxcli"
             dbxcli_bin="${script_install_path}/dbxcli"
@@ -782,38 +788,38 @@ maxibuild() {
           fi
 
         elif [[ "${required_cp}" == "ip" ]]; then
-          [[ "$(get_distro id)" == +(debian|ubuntu) ]] && apt-get -y install iproute2
+          [[ "$(get_distro id)" == @(debian|ubuntu) ]] && apt-get -y install iproute2
 
           echo "[${caller}]: Checking if ${required_cp} is installed ..."
           command -v "${required_cp}" &>/dev/null
           get_status_message "$?"
         elif [[ "${required_cp}" == "pstree" ]]; then
-          [[ "$(get_distro id)" == +(debian|ubuntu|centos|almalinux|rockylinux) ]] && apt-get -y install psmisc
+          [[ "$(get_distro id)" == @(debian|ubuntu|centos|almalinux|rockylinux) ]] && apt-get -y install psmisc
 
           echo "[${caller}]: Checking if ${required_cp} is installed ..."
           command -v "${required_cp}" &>/dev/null
           get_status_message "$?"
-        elif [[ "${required_cp}" == +(dig|nslookup) ]]; then
-          [[ "$(get_distro id)" == +(debian|ubuntu) ]] && apt-get -y install dnsutils
-          [[ "$(get_distro id)" == +(centos|almalinux|rockylinux) ]] && dnf -y install bind-utils
+        elif [[ "${required_cp}" == @(dig|nslookup) ]]; then
+          [[ "$(get_distro id)" == @(debian|ubuntu) ]] && apt-get -y install dnsutils
+          [[ "$(get_distro id)" == @(centos|almalinux|rockylinux) ]] && dnf -y install bind-utils
 
           echo "[${caller}]: Checking if ${required_cp} is installed ..."
           command -v "${required_cp}" &>/dev/null
           get_status_message "$?"
-        elif [[ "${required_cp}" == +(netstat) ]]; then
-          [[ "$(get_distro id)" == +(debian|ubuntu|centos|almalinux|rockylinux) ]] && apt-get -y install net-tools
+        elif [[ "${required_cp}" == @(netstat) ]]; then
+          [[ "$(get_distro id)" == @(debian|ubuntu|centos|almalinux|rockylinux) ]] && apt-get -y install net-tools
 
           echo "[${caller}]: Checking if ${required_cp} is installed ..."
           command -v "${required_cp}" &>/dev/null
           get_status_message "$?"
-        elif [[ "${required_cp}" == +(puttygen) ]]; then
-          [[ "$(get_distro id)" == +(debian|ubuntu|centos|almalinux|rockylinux) ]] && apt-get -y install putty-tools
+        elif [[ "${required_cp}" == @(puttygen) ]]; then
+          [[ "$(get_distro id)" == @(debian|ubuntu|centos|almalinux|rockylinux) ]] && apt-get -y install putty-tools
 
           echo "[${caller}]: Checking if ${required_cp} is installed ..."
           command -v "${required_cp}" &>/dev/null
           get_status_message "$?"
-        elif [[ "${required_cp}" == +(grepaddr) ]]; then
-          if [[ "$(get_distro id)" == +(debian|ubuntu|centos|almalinux|rockylinux) ]]; then
+        elif [[ "${required_cp}" == @(grepaddr) ]]; then
+          if [[ "$(get_distro id)" == @(debian|ubuntu|centos|almalinux|rockylinux) ]]; then
 
             local grepaddr_bin script_install_path
             script_install_path="/usr/local/opencode/grepaddr"
@@ -865,9 +871,9 @@ maxibuild() {
 
         elif
 
-          [[ "${required_cp}" == +(gotify-server) ]]
+          [[ "${required_cp}" == @(gotify-server) ]]
         then
-          if [[ "$(get_distro id)" == +(debian|ubuntu|centos|almalinux|rockylinux) ]]; then
+          if [[ "$(get_distro id)" == @(debian|ubuntu|centos|almalinux|rockylinux) ]]; then
             local script_install_path gotify_server_system_username gotify_server_system_group gotify_server_platform gotify_server_app_name gotify_server_service_name gotify_server_service_location \
               gotify_server_app_path gotify_server_bin gotify_server_data_path gotify_server_config gotify_server_latest_version gotify_server_latest_url
             script_install_path="/usr/local/opencode/gotify"
@@ -1081,8 +1087,8 @@ maxibuild() {
             get_status_message "$?"
 
           fi
-        elif [[ "${required_cp}" == +(gotify-client) ]]; then
-          if [[ "$(get_distro id)" == +(debian|ubuntu|centos|almalinux|rockylinux) ]]; then
+        elif [[ "${required_cp}" == @(gotify-client) ]]; then
+          if [[ "$(get_distro id)" == @(debian|ubuntu|centos|almalinux|rockylinux) ]]; then
 
             local gotify_client_bin script_install_path gotify_client_latest_version gotify_client_latest_url
             script_install_path="/usr/local/opencode/gotify"
@@ -1137,8 +1143,8 @@ maxibuild() {
             get_status_message "$?"
 
           fi
-        elif [[ "${required_cp}" == +(blcheck) ]]; then
-          if [[ "$(get_distro id)" == +(debian|ubuntu|centos|almalinux|rockylinux) ]]; then
+        elif [[ "${required_cp}" == @(blcheck) ]]; then
+          if [[ "$(get_distro id)" == @(debian|ubuntu|centos|almalinux|rockylinux) ]]; then
             local blcheck_bin script_install_path
 
             script_install_path="/usr/local/opencode/blcheck"
@@ -1180,8 +1186,8 @@ maxibuild() {
 
           fi
 
-        elif [[ "${required_cp}" == +(wpcli|wp) ]]; then
-          if [[ "$(get_distro id)" == +(debian|ubuntu|centos|almalinux|rockylinux) ]]; then
+        elif [[ "${required_cp}" == @(wpcli|wp) ]]; then
+          if [[ "$(get_distro id)" == @(debian|ubuntu|centos|almalinux|rockylinux) ]]; then
             local wpcli_bin script_install_path
 
             script_install_path="/usr/local/opencode/wpcli"
@@ -1239,8 +1245,8 @@ maxibuild() {
             get_status_message "$?"
 
           fi
-        elif [[ "${required_cp}" == +(rclone) ]]; then
-          if [[ "$(get_distro id)" == +(debian|ubuntu|centos|almalinux|rockylinux) ]]; then
+        elif [[ "${required_cp}" == @(rclone) ]]; then
+          if [[ "$(get_distro id)" == @(debian|ubuntu|centos|almalinux|rockylinux) ]]; then
             local install_temp_path
 
             install_temp_path="${TEMP_PATH}/rclone"
@@ -1301,8 +1307,8 @@ maxibuild() {
             get_status_message "$?"
 
           fi
-        elif [[ "${required_cp}" == +(yq) ]]; then
-          if [[ "$(get_distro id)" == +(debian|ubuntu|centos|almalinux|rockylinux) ]]; then
+        elif [[ "${required_cp}" == @(yq) ]]; then
+          if [[ "$(get_distro id)" == @(debian|ubuntu|centos|almalinux|rockylinux) ]]; then
             local install_temp_path arch_string yq_binary
 
             install_temp_path="${TEMP_PATH}/yq"
@@ -1354,7 +1360,7 @@ maxibuild() {
             fi
 
           fi
-        elif [[ "${required_cp}" == +(suricata|suricata_distro|suricata_backport|suricata_v6.0.9|suricata_v7.0.0-beta1) ]]; then
+        elif [[ "${required_cp}" == @(suricata|suricata_distro|suricata_backport|suricata_v6.0.9|suricata_v6.0.10|suricata_v7.0.0-rc1) ]]; then
 
           echo "[${caller}]: Removing apt source list backports for suricata ..."
           sed -i "/deb http:\/\/deb.debian.org\/debian .*.-backports main/d" /etc/apt/sources.list
@@ -1393,12 +1399,12 @@ maxibuild() {
           # Latest version as Jan 14 2023 is 6.0.1
           if [[ "${required_cp}" == "suricata_distro" ]]; then
             echo "[${caller}]: Installing suricata from the distribution repository ..."
-            if [[ "$(get_distro id)" == +(debian|ubuntu) ]]; then
+            if [[ "$(get_distro id)" == @(debian|ubuntu) ]]; then
               apt-get install -y suricata
               get_status_message "$?"
               echo ""
             elif
-              [[ "$(get_distro id)" == +(centos|almalinux|rockylinux) ]]
+              [[ "$(get_distro id)" == @(centos|almalinux|rockylinux) ]]
             then
               dnf install -y suricata
               get_status_message "$?"
@@ -1409,7 +1415,7 @@ maxibuild() {
             fi
           # Latest version as Jan 14 2023 is v6.0.9 for Debian 11
           elif [[ "${required_cp}" == "suricata_backport" ]]; then
-            if [[ "$(get_distro codename)" == +(bullseye|buster) ]]; then
+            if [[ "$(get_distro codename)" == @(bullseye|buster) ]]; then
               echo "[${caller}]: Writing backports to /etc/apt/sources.list ..."
               # Only write this if it doesn't exist
               grep -q "deb http://deb.debian.org/debian $(get_distro codename)-backports main" /etc/apt/sources.list || {
@@ -1430,8 +1436,8 @@ maxibuild() {
             else
               echo "[${caller}]: ERROR, suricata backport installation is not available (or implemented) for $(get_distro codename)"
             fi
-          # Manual version - As Jan 14 2023, the latest version is v6.0.9 STABLE and v.7.0.0 BETA 1
-          elif [[ "${required_cp}" == +(suricata|suricata_v6.0.9|suricata_v7.0.0-beta1) ]]; then
+          # Manual version - As February 15 2023, the latest version is v6.0.10 STABLE and v.7.0.0 RC 1
+          elif [[ "${required_cp}" == @(suricata|suricata_v6.0.9|suricata_v6.0.10|suricata_v7.0.0-rc1) ]]; then
 
             local suricata_download_url install_temp_path="${TEMP_PATH}/suricata_install" version
 
@@ -1457,8 +1463,10 @@ maxibuild() {
               fi
             elif [[ "${required_cp}" == "suricata_v6.0.9" ]]; then
               version="6.0.9"
-            elif [[ "${required_cp}" == "suricata_v7.0.0-beta1" ]]; then
-              version="7.0.0-beta1"
+            elif [[ "${required_cp}" == "suricata_v6.0.10" ]]; then
+              version="6.0.10"
+            elif [[ "${required_cp}" == "suricata_v7.0.0-rc1" ]]; then
+              version="7.0.0-rc1"
             fi
 
             suricata_download_url="https://www.openinfosecfoundation.org/download/suricata-${version}.tar.gz"
@@ -1473,7 +1481,7 @@ maxibuild() {
             get_status_message "$?"
             echo ""
 
-            if [[ "$(get_distro id)" == +(debian|ubuntu) ]]; then
+            if [[ "$(get_distro id)" == @(debian|ubuntu) ]]; then
               echo "[${caller}]: Installing essential build tools ..."
               apt-get -y install make autoconf automake libtool
               get_status_message "$?"
@@ -1485,7 +1493,7 @@ maxibuild() {
               get_status_message "$?"
               echo ""
 
-            elif [[ "$(get_distro id)" == +(centos|almalinux|rockylinux) ]]; then
+            elif [[ "$(get_distro id)" == @(centos|almalinux|rockylinux) ]]; then
               echo "[${caller}]: Installing essential build tools ..."
               dnf install -y make autoconf automake libtool
               get_status_message "$?"
@@ -1553,10 +1561,133 @@ maxibuild() {
               exit 1
             fi
 
-            # Modify suricata configuration file
+            # Modify suricata configuration file from /etc/suricata/suricata.yaml
             echo "[${caller}]: Modifying suricata configuration file ..."
-            #yq
-            # TODO pending
+
+            # Get the ssh port from sshd_config and change the ssh port from suricata configuration file
+            echo "[${caller}]: Getting ssh port from sshd_config ..."
+            local ssh_port
+            ssh_port=$(grep "^Port" /etc/ssh/sshd_config | cut -d' ' -f2)
+
+            if [[ -z "${ssh_port}" ]]; then
+              echo "[${caller}]: ERROR, could not get ssh port from sshd_config"
+              exit 1
+            fi
+
+            # Setting the ssh port in suricata configuration file
+            echo ""
+
+            echo "[${caller}]: Setting the ssh port in suricata configuration file ..."
+            yq eval --inplace '.vars.port-groups.SSH_PORTS = '"$ssh_port"'' /etc/suricata/suricata.yaml
+            get_status_message "$?"
+            echo ""
+
+            # Disabling stats in suricata configuration file
+            echo "[${caller}]: Disabling stats in suricata configuration file ..."
+            yq eval --inplace '.stats.enabled = no' /etc/suricata/suricata.yaml
+            get_status_message "$?"
+            echo ""
+
+            # Disabling fast.log in suricata configuration file
+            echo "[${caller}]: Disabling fast.log in suricata configuration file ..."
+            yq eval --inplace '.outputs.fast.enabled = no' /etc/suricata/suricata.yaml
+            get_status_message "$?"
+            echo ""
+
+            # Disabling eve.json in suricata configuration file
+            echo "[${caller}]: Disabling eve.json in suricata configuration file ..."
+            yq eval --inplace '.outputs.eve-log.enabled = no' /etc/suricata/suricata.yaml
+            get_status_message "$?"
+            echo ""
+
+            # Disabling http.log in suricata configuration file
+            echo "[${caller}]: Disabling http.log in suricata configuration file ..."
+            yq eval --inplace '.outputs.http-log.enabled = no' /etc/suricata/suricata.yaml
+            get_status_message "$?"
+            echo ""
+
+            # Disabling tls.log in suricata configuration file
+            echo "[${caller}]: Disabling tls.log in suricata configuration file ..."
+            yq eval --inplace '.outputs.tls-log.enabled = no' /etc/suricata/suricata.yaml
+            get_status_message "$?"
+            echo ""
+
+            # Disabling tls-store
+            echo "[${caller}]: Disabling tls-store ..."
+            yq eval --inplace '.tls-store.enabled = no' /etc/suricata/suricata.yaml
+            get_status_message "$?"
+            echo ""
+
+            # Disabling pcap-log
+            echo "[${caller}]: Disabling pcap-log ..."
+            yq eval --inplace '.outputs.pcap-log.enabled = no' /etc/suricata/suricata.yaml
+            get_status_message "$?"
+            echo ""
+
+            # Disabling alert-debug
+            echo "[${caller}]: Disabling alert-debug ..."
+            yq eval --inplace '.outputs.alert-debug.enabled = no' /etc/suricata/suricata.yaml
+            get_status_message "$?"
+            echo ""
+
+            # Disabling alert-prelude
+            echo "[${caller}]: Disabling alert-prelude ..."
+            yq eval --inplace '.outputs.alert-prelude.enabled = no' /etc/suricata/suricata.yaml
+            get_status_message "$?"
+            echo ""
+
+            # Disabling stats
+            echo "[${caller}]: Disabling stats ..."
+            yq eval --inplace '.stats.enabled = no' /etc/suricata/suricata.yaml
+            get_status_message "$?"
+            echo ""
+
+            # Disabling syslog
+            echo "[${caller}]: Disabling syslog ..."
+            yq eval --inplace '.outputs.syslog.enabled = no' /etc/suricata/suricata.yaml
+            get_status_message "$?"
+            echo ""
+
+            # Disabling file-store
+            echo "[${caller}]: Disabling file-store ..."
+            yq eval --inplace '.file-store.enabled = no' /etc/suricata/suricata.yaml
+            get_status_message "$?"
+            echo ""
+
+            # Disabling file-store xff
+            echo "[${caller}]: Disabling file-store xff ..."
+            yq eval --inplace '.file-store.xff.enabled = no' /etc/suricata/suricata.yaml
+            get_status_message "$?"
+            echo ""
+
+            # Disabling tpc-data
+            echo "[${caller}]: Disabling tpc-data ..."
+            yq eval --inplace '.outputs.tcp-data.enabled = no' /etc/suricata/suricata.yaml
+            get_status_message "$?"
+            echo ""
+
+            # Disabling http-body-data
+            echo "[${caller}]: Disabling http-body-data ..."
+            yq eval --inplace '.outputs.http-body-data.enabled = no' /etc/suricata/suricata.yaml
+            get_status_message "$?"
+            echo ""
+
+            # Enabling lua output and add a lua script called maxiwall.lua
+            echo "[${caller}]: Enabling lua output and add a lua script called maxiwall.lua ..."
+            yq eval --inplace '.outputs.lua.enabled = yes' /etc/suricata/suricata.yaml
+            get_status_message "$?"
+            echo ""
+
+            # Make sure the lua-output directory exists
+            echo "[${caller}]: Adding lua script ..."
+            yq eval --inplace '.outputs.lua.script-dir = "/etc/suricata/lua-output"' /etc/suricata/suricata.yaml
+            get_status_message "$?"
+            echo ""
+
+            echo "[${caller}]: Creating /etc/suricata/lua-output directory ..."
+            mkdir -p /etc/suricata/lua-output
+            get_status_message "$?"
+            echo ""
 
             # Writing suricata service file
             echo "[${caller}]: Writing suricata service file ..."
@@ -1656,11 +1787,28 @@ maxibuild() {
           systemctl start suricata.service
           get_status_message "$?"
           echo ""
-        elif [[ "${required_cp}" == +(maxiwall) ]]; then
-          if [[ "$(get_distro id)" == +(debian|ubuntu) ]]; then
+        elif [[ "${required_cp}" == @(maxiwall) ]]; then
+          if [[ "$(get_distro id)" == @(debian|ubuntu) ]]; then
             local maxiwall_bin install_temp_path
             install_temp_path="/usr/local/maxicode/maxiwall"
             maxiwall_bin="${install_temp_path}/maxiwall"
+
+            # Install lua dependencies
+            # Check if dkjson is installed, if not we install it
+            if ! luarocks list | grep '^dkjson' &>/dev/null; then
+              echo "[${caller}]: Installing dkjson ..."
+              luarocks install dkjson
+              get_status_message "$?"
+              echo ""
+            fi
+
+            # Check if luasocket is installed, if not we install it
+            if ! luarocks list | grep '^luasocket' &>/dev/null; then
+              echo "[${caller}]: Installing luasocket ..."
+              luarocks install luasocket
+              get_status_message "$?"
+              echo ""
+            fi
 
             # Make sure suricata is installed, if not we install it
             if ! command -v suricata &>/dev/null; then
@@ -1669,14 +1817,65 @@ maxibuild() {
               FORCE_INSTALL=true INCLUDE_CPS="suricata" maxibuild
             fi
 
-            # TODO pending
+            # Remove existing maxiwall installation
+            echo "[${caller}]: Removing existing maxiwall installation ..."
+            rm -rf "${install_temp_path}" "/usr/local/bin/maxiwall" "/usr/bin/maxiwall"
+            get_status_message "$?"
+            echo ""
+
+            # Creating maxiwall installation directory
+            echo "[${caller}]: Creating maxiwall installation directory ..."
+            mkdir -p "${install_temp_path}"
+            get_status_message "$?"
+            echo ""
+
+            echo "[${caller}]: Cloning the maxiwall repository ..."
+            git clone https://github.com/sofibox/maxiwall_public.git "${script_install_path}"
+            get_status_message "$?"
+            echo ""
+
+            # Change directory to script_install_path, if failed then exit with a message
+            cd "${script_install_path}" || {
+              echo "Failed to change directory to ${script_install_path}"
+              exit 1
+            }
+
+            echo "[${caller}]: Giving execute permission to maxiwall ..."
+            chmod +x ${maxiwall_bin}
+            get_status_message "$?"
+            echo ""
+
+            echo "[${caller}]: Creating a symbolic link for maxiwall ..."
+            ln -s "${maxiwall_bin}" "/usr/local/bin"
+            get_status_message "$?"
+
+            echo "[${caller}]: Checking whether maxiwall command is available ..."
+            command -v maxiwall &>/dev/null
+            get_status_message "$?"
+
+            # Adding lua script
+            echo "[${caller}]: Adding lua script ..."
+            yq eval --inplace '.outputs.lua.script = "maxiwall.lua"' /etc/suricata/suricata.yaml
+            get_status_message "$?"
+            echo ""
+
+            # Add   - /usr/local/maxicode/maxiwall/maxiwall.rules to suricata.yaml
+            echo "[${caller}]: Adding /usr/local/maxicode/maxiwall/maxiwall.rules to suricata.yaml only if it does not exist ..."
+            if ! grep -q '/usr/local/maxicode/maxiwall/maxiwall.rules' /etc/suricata/suricata.yaml; then
+              yq eval --inplace '.rule-files += ["/usr/local/maxicode/maxiwall/maxiwall.rules"]' /etc/suricata/suricata.yaml
+              get_status_message "$?"
+              echo ""
+            fi
 
           fi
 
+          # TODO
+
         elif
-          [[ "${required_cp}" == +(lua) ]]
+
+          [[ "${required_cp}" == @(lua) ]]
         then
-          if [[ "$(get_distro id)" == +(debian|ubuntu) ]]; then
+          if [[ "$(get_distro id)" == @(debian|ubuntu) ]]; then
             local lua_installed_versions lua_latest_web_version install_temp_path
 
             install_temp_path="${TEMP_PATH}/lua_install"
@@ -1767,9 +1966,24 @@ maxibuild() {
             get_status_message "$?"
             echo ""
 
+            # Make sure luarocks is installed, if not we install it
+            if ! command -v luarocks &>/dev/null; then
+              if [[ "$(get_distro id)" == @(debian|ubuntu) ]]; then
+                echo "[${caller}]: Installing luarocks ..."
+                apt-get install -y luarocks
+                get_status_message "$?"
+                echo ""
+              elif [[ "$(get_distro id)" == @(centos|almalinux|rockylinux) ]]; then
+                echo "[${caller}]: Installing luarocks ..."
+                yum install -y luarocks
+                get_status_message "$?"
+                echo ""
+              fi
+            fi
+
           fi
-        elif [[ "${required_cp}" == +(aipdb) ]]; then
-          if [[ "$(get_distro id)" == +(debian|ubuntu|centos|almalinux|rockylinux) ]]; then
+        elif [[ "${required_cp}" == @(aipdb) ]]; then
+          if [[ "$(get_distro id)" == @(debian|ubuntu|centos|almalinux|rockylinux) ]]; then
 
             local aipdb_bin script_install_path
 
@@ -1811,8 +2025,8 @@ maxibuild() {
             get_status_message "$?"
 
           fi
-        elif [[ "${required_cp}" == +(greynoise) ]]; then
-          if [[ "$(get_distro id)" == +(debian|ubuntu|centos|almalinux|rockylinux) ]]; then
+        elif [[ "${required_cp}" == @(greynoise) ]]; then
+          if [[ "$(get_distro id)" == @(debian|ubuntu|centos|almalinux|rockylinux) ]]; then
 
             local greynoise_bin script_install_path
 
@@ -1856,9 +2070,9 @@ maxibuild() {
           fi
 
         elif
-          [[ "${required_cp}" == +(virustotal) ]]
+          [[ "${required_cp}" == @(virustotal) ]]
         then
-          if [[ "$(get_distro id)" == +(debian|ubuntu|centos|almalinux|rockylinux) ]]; then
+          if [[ "$(get_distro id)" == @(debian|ubuntu|centos|almalinux|rockylinux) ]]; then
 
             local virustotal_bin script_install_path
 
@@ -1898,11 +2112,11 @@ maxibuild() {
         else
           echo "[${caller}]: Installing ${required_cp} from the default repository ..."
           # Do normal distro installation
-          if [[ "$(get_distro id)" == +(debian|ubuntu) ]]; then
+          if [[ "$(get_distro id)" == @(debian|ubuntu) ]]; then
             apt-get -y install "${required_cp}"
             get_status_message "$?"
             echo ""
-          elif [[ "$(get_distro id)" == +(centos|almalinux|rockylinux) ]]; then
+          elif [[ "$(get_distro id)" == @(centos|almalinux|rockylinux) ]]; then
             dnf -y install "${required_cp}"
             get_status_message "$?"
             echo ""
@@ -1935,10 +2149,10 @@ maxibuild() {
 
         if [[ "${missing_count}" -eq 1 ]]; then
           echo "[${caller}]: Running system update for the first missing package ..."
-          if [[ "$(get_distro id)" == +(debian|ubuntu) ]]; then
+          if [[ "$(get_distro id)" == @(debian|ubuntu) ]]; then
             apt-get -qq -y update
             retval=$?
-          elif [[ "$(get_distro id)" == +(centos|fedora|rhel|almalinux|rocklylinux) ]]; then
+          elif [[ "$(get_distro id)" == @(centos|fedora|rhel|almalinux|rocklylinux) ]]; then
             dnf -q -y update
             retval=$?
           fi
@@ -1950,18 +2164,18 @@ maxibuild() {
         echo "-------"
         echo ""
         # Add custom package to install here
-        if [[ "${required_cp}" == +(bind-utils|dnsutils) ]]; then
-          if [[ "$(get_distro id)" == +(debian|ubuntu) ]]; then
+        if [[ "${required_cp}" == @(bind-utils|dnsutils) ]]; then
+          if [[ "$(get_distro id)" == @(debian|ubuntu) ]]; then
             apt-get -y install dnsutils
             retval="$?"
           elif
-            [[ "$(get_distro id)" == +(centos|almalinux|rockylinux|rhel) ]]
+            [[ "$(get_distro id)" == @(centos|almalinux|rockylinux|rhel) ]]
           then
             dnf -y install bind-utils
             retval="$?"
           fi
         else
-          if [[ "$(get_distro id)" == +(debian|ubuntu) ]]; then
+          if [[ "$(get_distro id)" == @(debian|ubuntu) ]]; then
             apt-get -y install "${required_cp}"
             retval="$?"
           else
@@ -2021,11 +2235,11 @@ while [ "$#" -gt 0 ]; do
     exit $?
     ;;
   # This will force both packages and commands installation
-  -f | --force-install | --force)
+  -f | --force-install | --force | force-install | force)
     FORCE_INSTALL=true
     shift
     ;;
-  -i | --include | --required | --install)
+  -i | --include | --required | --install | include | required | install)
     INCLUDE_CPS="$2"
     shift 2
     ;;
