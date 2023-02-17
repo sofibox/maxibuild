@@ -1544,10 +1544,15 @@ maxibuild() {
             echo ""
 
             # If we don't use /tmp, this will prevent rustup error of: "likely because of mounting /tmp if /tmp is not writeable"
+
+            echo "[${caller}]: Creating temporary directory for rustc installation ..."
+            mkdir -p "${HOME}/rust_install"
+            get_status_message "$?"
+            echo ""
+
             navigate_to "${HOME}/rust_install"
 
             echo "[${caller}]: Installing rustc package from https://sh.rustup.rs ..."
-
             curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y 2>&1
             get_status_message "$?"
             echo ""
