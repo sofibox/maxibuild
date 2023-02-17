@@ -1556,7 +1556,7 @@ maxibuild() {
               echo "[${caller}]: Notice, rustup-init file is located at: ${rustup_tmp_init}"
               echo ""
 
-              echo "[${caller}]: Copying rustup-init file to ${HOME}/rust_install ..."
+              echo "[${caller}]: Copying ${rustup_tmp_init} file to ${HOME}/rust_install ..."
               cp "${rustup_tmp_init}" "${HOME}/rust_install"
               get_status_message "$?"
               echo ""
