@@ -2244,6 +2244,7 @@ SCRIPT_NAME=$(basename -- "$0")
 TEMP_PATH="/tmp"
 CALLER="$(basename -- "$0")"
 
+OLD_PATH="${PWD}"
 FORCE_INSTALL=false
 INCLUDE_CPS=""
 
