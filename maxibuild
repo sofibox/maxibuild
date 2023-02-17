@@ -1556,20 +1556,20 @@ maxibuild() {
               echo "[${caller}]: Notice, rustup-init file is located at: ${rustup_tmp_init}"
               echo ""
 
-              echo "[${caller}]: Copying rustup-init file to ${install_temp_path} ..."
-              cp "${rustup_tmp_init}" "${install_temp_path}/rustup-init"
+              echo "[${caller}]: Copying rustup-init file to ${HOME}/rust_install ..."
+              cp "${rustup_tmp_init}" "${HOME}/rust_install"
               get_status_message "$?"
               echo ""
 
               # Give execute permission to rustup-init file
               echo "[${caller}]: Giving execute permission to rustup-init file ..."
-              chmod +x "${install_temp_path}/rustup-init"
+              chmod +x "${HOME}/rust_install"
               get_status_message "$?"
               echo ""
 
               # Executing rustup-init file
               echo "[${caller}]: Executing rustup-init file ..."
-              "${install_temp_path}/rustup-init" -y
+              "${HOME}/rust_install" -y
             else
               echo "[${caller}]: Notice, rustup installation succeeded."
             fi
