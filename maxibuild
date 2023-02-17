@@ -1513,8 +1513,33 @@ maxibuild() {
             get_status_message "$?"
             echo ""
 
-            echo "[${caller}]: Installing rustc package ..."
-            curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y 2>&1
+            navigate_to "${install_temp_path}"
+
+            echo "[${caller}]: Installing rustc package from https://sh.rustup.rs ..."
+
+            local rustup_install_temp_error
+
+            rustup_install_temp_error=$(curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y 2>&1 | grep 'likely because of mounting /tmp')
+
+            if [ -n "${rustup_install_temp_error}" ]; then
+              local rustup_tmp_init
+              rustup_tmp_init=$(echo "${rustup_install_temp_error}" | awk '{ print $3 }')
+              echo "[${caller}]: Notice, rustup installation failed. Resolving the error of: ${rustup_install_temp_error}"
+              echo "[${caller}]: Notice, rustup-init file is located at: ${rustup_tmp_init}"
+              echo ""
+
+              echo "[${caller}]: Copying rustup-init file to ${install_temp_path} ..."
+              cp "${rustup_tmp_init}" "${install_temp_path}/rustup-init"
+              get_status_message "$?"
+              echo ""
+
+              # Executing rustup-init file
+              echo "[${caller}]: Executing rustup-init file ..."
+              "${install_temp_path}/rustup-init" -y
+            else
+              echo "[${caller}]: Notice, rustup installation succeeded."
+            fi
+
             get_status_message "$?"
             echo ""
 
