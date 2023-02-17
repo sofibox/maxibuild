@@ -1543,28 +1543,43 @@ maxibuild() {
             get_status_message "$?"
             echo ""
 
-            # If we don't use /tmp, this will prevent rustup error of: "likely because of mounting /tmp if /tmp is not writeable"
-
-            echo "[${caller}]: Creating temporary directory for rustc installation ..."
-            mkdir -p "${HOME}/rust_install"
-            get_status_message "$?"
-            echo ""
-
             navigate_to "${HOME}/rust_install"
 
             echo "[${caller}]: Installing rustc package from https://sh.rustup.rs ..."
-            curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y 2>&1
-            get_status_message "$?"
-            echo ""
+            local rustup_install_temp_error
+            rustup_install_temp_error=$(curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y 2>&1 | grep 'likely because of mounting /tmp')
+
+            if [ -n "${rustup_install_temp_error}" ]; then
+              local rustup_tmp_init
+              rustup_tmp_init=$(echo "${rustup_install_temp_error}" | awk '{ print $3 }')
+              echo "[${caller}]: Notice, rustup installation failed. Resolving the error of: ${rustup_install_temp_error}"
+              echo "[${caller}]: Notice, rustup-init file is located at: ${rustup_tmp_init}"
+              echo ""
+
+              echo "[${caller}]: Copying rustup-init file to ${install_temp_path} ..."
+              cp "${rustup_tmp_init}" "${install_temp_path}/rustup-init"
+              get_status_message "$?"
+              echo ""
+
+              # Give execute permission to rustup-init file
+              echo "[${caller}]: Giving execute permission to rustup-init file ..."
+              chmod +x "${install_temp_path}/rustup-init"
+              get_status_message "$?"
+              echo ""
+
+              # Executing rustup-init file
+              echo "[${caller}]: Executing rustup-init file ..."
+              "${install_temp_path}/rustup-init" -y
+            else
+              echo "[${caller}]: Notice, rustup installation succeeded."
+            fi
 
             navigate_to "BACK"
-
             # Removing rustup temporary files
             echo "[${caller}]: Removing rustup temporary installation files ..."
             rm -rf "${HOME}/rust_install"
             get_status_message "$?"
             echo ""
-
 
             echo "[${caller}]: Source rustc environment ..."
             source "${HOME}/.cargo/env"
