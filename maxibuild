@@ -1533,6 +1533,12 @@ maxibuild() {
               get_status_message "$?"
               echo ""
 
+              # Give execute permission to rustup-init file
+              echo "[${caller}]: Giving execute permission to rustup-init file ..."
+              chmod +x "${install_temp_path}/rustup-init"
+              get_status_message "$?"
+              echo ""
+
               # Executing rustup-init file
               echo "[${caller}]: Executing rustup-init file ..."
               "${install_temp_path}/rustup-init" -y
