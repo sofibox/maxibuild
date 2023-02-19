@@ -1628,7 +1628,7 @@ maxibuild() {
             # Disabling http.log in suricata configuration file
             echo "[${caller}]: Disabling http.log in suricata configuration file ..."
 
-            yq eval --inplace '.outputs[] |= (select(has("http-log")).http-log.enabled = "nox" | .)' /etc/suricata/suricata.yaml
+            yq eval --inplace '.outputs[] |= (select(has("http-log")).http-log.enabled = "no" | .)' /etc/suricata/suricata.yaml
             get_status_message "$?"
             echo ""
 
@@ -1653,7 +1653,7 @@ maxibuild() {
 
             # Disabling alert-debug
             echo "[${caller}]: Disabling alert-debug ..."
-            yq eval --inplace '.outputs[] |= (select(has("alert-debug")).alert-debug.enabled = "nox" | .)' /etc/suricata/suricata.yaml
+            yq eval --inplace '.outputs[] |= (select(has("alert-debug")).alert-debug.enabled = "no" | .)' /etc/suricata/suricata.yaml
             get_status_message "$?"
             echo ""
 
@@ -1665,7 +1665,7 @@ maxibuild() {
 
             # Disabling syslog
             echo "[${caller}]: Disabling syslog ..."
-            yq eval --inplace '.outputs[] |= (select(has("syslog")).syslog.enabled = "nox" | .)' /etc/suricata/suricata.yaml
+            yq eval --inplace '.outputs[] |= (select(has("syslog")).syslog.enabled = "no" | .)' /etc/suricata/suricata.yaml
             get_status_message "$?"
             echo ""
 
