@@ -1831,12 +1831,10 @@ maxibuild() {
           maxiwall_bin="${script_install_path}/maxiwall"
 
           # Make sure suricata is installed, if not we install it
+
           if ! command -v suricata &>/dev/null; then
             echo "[${caller}]: Notice, suricata is missing. Installing suricata ..."
             INCLUDE_CPS="suricata" maxibuild
-          else
-            echo "[${caller}]: Notice, suricata is already installed. Reinstalling suricata ..."
-            FORCE_INSTALL=true INCLUDE_CPS="suricata" maxibuild
           fi
 
           navigate_to "${SCRIPT_PATH}"
