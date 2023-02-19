@@ -2,7 +2,7 @@
 #"=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~="
 # ==================================================
 _APP_SPECIFIC_NAME="Maxibuild"
-_APP_VERSION="0.3.7"
+_APP_VERSION="0.3.8"
 _APP_STATUS="alpha"
 _APP_INFO="${_APP_SPECIFIC_NAME} is a bash script to manage packages."
 _APP_VERSION_STATUS="${_APP_VERSION}-${_APP_STATUS}"
@@ -177,21 +177,22 @@ navigate_to() {
 
   local to_path="$1"
 
-  if [[ -z "${to_path}" ]]; then
-    echo "Error, no path specified"
-    exit 1
-  fi
-
-  if [[ ! -d "${to_path}" ]]; then
-    echo "Error, the path ${to_path} does not exist"
-    exit 1
-  fi
-
   if [[ "${to_path^^}" == +(PRE|PREVIOUS|OLDPATH|BACK|OLDPWD) ]]; then
     # OLD_PATH holds a previous path (see global variable of PREPATH in this script)
     echo "Navigating out into ${OLD_PATH} ..."
     to_path="${OLD_PATH}"
   else
+
+    if [[ -z "${to_path}" ]]; then
+      echo "Error, no path specified"
+      exit 1
+    fi
+
+    if [[ ! -d "${to_path}" ]]; then
+      echo "Error, the path ${to_path} does not exist"
+      exit 1
+    fi
+
     echo "Navigating into ${to_path} ..."
     OLD_PATH="${PWD}"
   fi
@@ -207,7 +208,7 @@ maxibuild() {
 
   local caller required_cps missing_count
 
-  # To avoid error when current path, we must always start from this path
+  # To avoid error for current, we must always start from this path
   cd "${SCRIPT_PATH}" || {
     echo "Failed to change directory to ${SCRIPT_PATH}"
     exit 1
@@ -223,7 +224,7 @@ maxibuild() {
   for required_cp in ${required_cps[*]}; do
     # If the required package is a special command, we list it here
     # For example `puttygen` is a command and its package name is `putty-tools`. So if we want to install putty-tools, we can use `puttygen` as the command to install
-    if [[ "${required_cp}" == @(mail|linode-cli|ipcalc|maxipi|maxiaide|maxigpg|maxiperm|maxida|maxilog|dbxcli|ip|pstree|netstat|puttygen|grepaddr|gotify-server|gotify-client|blcheck|wp|wpcli|rclone|yq|suricata_distro|suricata_backport|suricata|suricata_v6.0.9|suricata_v6.0.10|suricata_v7.0.0-rc1|lua|aipdb|greynoise|virustotal) ]]; then
+    if [[ "${required_cp}" == @(mail|linode-cli|ipcalc|maxipi|maxiaide|maxigpg|maxiperm|maxida|maxilog|maxiwall|dbxcli|ip|pstree|netstat|puttygen|grepaddr|gotify-server|gotify-client|blcheck|wp|wpcli|rclone|yq|suricata_distro|suricata_backport|suricata|suricata_v6.0.9|suricata_v6.0.10|suricata_v7.0.0-rc1|lua|aipdb|greynoise|virustotal) ]]; then
 
       local cmd_status retval
       # Using command to obtain installation status
@@ -394,10 +395,7 @@ maxibuild() {
           echo ""
 
           # Change directory to script_install_path, if failed then exit with a message
-          cd "${script_install_path}" || {
-            echo "Failed to change directory to ${script_install_path}"
-            exit 1
-          }
+          navigate_to "${script_install_path}"
 
           echo "[${caller}]: Configuring ipcalc build type ..."
           meson setup build --buildtype=release
@@ -961,10 +959,8 @@ maxibuild() {
             get_status_message "$?"
             echo ""
 
-            cd "${gotify_server_app_path}" || {
-              echo "[${caller}]: ERROR, could not change directory to ${gotify_server_app_path}"
-              exit 1
-            }
+            navigate_to "${gotify_server_app_path}"
+
             echo "[${caller}]: Downloading the latest version of gotify server ..."
 
             wget -q "${gotify_server_latest_url}"
@@ -1148,10 +1144,7 @@ maxibuild() {
             get_status_message "$?"
             echo ""
 
-            cd "${gotify_client_app_path}" || {
-              echo "[${caller}]: ERROR, could not change directory to ${gotify_client_app_path}"
-              exit 1
-            }
+            navigate_to "${gotify_client_app_path}"
 
             echo "[${caller}]: Downloading gotify client (gotify-cli) ..."
             curl -Lo "${gotify_client_bin}" "${gotify_client_latest_url}"
@@ -1233,10 +1226,7 @@ maxibuild() {
             get_status_message "$?"
             echo ""
 
-            cd "${script_install_path}" || {
-              echo "[${caller}]: ERROR, could not change directory to ${script_install_path}"
-              exit 1
-            }
+            navigate_to "${script_install_path}"
 
             echo "[${caller}]: Downloading wpcli ..."
             curl -O https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar
@@ -1291,10 +1281,7 @@ maxibuild() {
             get_status_message "$?"
             echo ""
 
-            cd "${install_temp_path}" || {
-              echo "[${caller}]: ERROR, could not change directory to ${install_temp_path}"
-              exit 1
-            }
+            navigate_to "${install_temp_path}"
 
             echo "[${caller}]: Downloading rclone ..."
             curl -O https://downloads.rclone.org/rclone-current-linux-amd64.zip
@@ -1306,20 +1293,14 @@ maxibuild() {
             get_status_message "$?"
             echo ""
 
-            cd rclone-*-linux-amd64 || {
-              echo "[${caller}]: ERROR, could not change directory to rclone-*-linux-amd64"
-              exit 1
-            }
+            navigate_to rclone-*-linux-amd64
 
             echo "[${caller}]: Moving rclone to /usr/local/bin/rclone ..."
             mv rclone /usr/local/bin
             get_status_message "$?"
             echo ""
 
-            cd "${install_temp_path}" || {
-              echo "[${caller}]: ERROR, could not change directory to ${install_temp_path}"
-              exit 1
-            }
+            navigate_to "${install_temp_path}"
 
             echo "[${caller}]: Removing rclone installation temporary files ..."
 
@@ -1361,10 +1342,7 @@ maxibuild() {
               get_status_message "$?"
               echo ""
 
-              cd "${install_temp_path}" || {
-                echo "[${caller}]: ERROR, could not change directory to ${install_temp_path}"
-                exit 1
-              }
+              navigate_to "${install_temp_path}"
 
               echo "[${caller}]: Downloading yq ..."
               wget -q "${yq_latest_url}" -O /usr/local/bin/yq
@@ -1469,7 +1447,7 @@ maxibuild() {
           # Manual version - As February 15 2023, the latest version is v6.0.10 STABLE and v.7.0.0 RC 1
           elif [[ "${required_cp}" == @(suricata|suricata_v6.0.9|suricata_v6.0.10|suricata_v7.0.0-rc1) ]]; then
 
-            local suricata_download_url install_temp_path="${TEMP_PATH}/suricata_install" version
+            local suricata_download_url install_temp_path="${HOME}/suricata_install" version
 
             # We need to make sure that yq is installed. If not install it
             if ! command -v yq &>/dev/null; then
@@ -1543,7 +1521,7 @@ maxibuild() {
             get_status_message "$?"
             echo ""
 
-            navigate_to "${HOME}/rust_install"
+            navigate_to "${install_temp_path}"
 
             echo "[${caller}]: Installing rustc package from https://sh.rustup.rs ..."
             local rustup_install_temp_error
@@ -1556,30 +1534,23 @@ maxibuild() {
               echo "[${caller}]: Notice, rustup-init file is located at: ${rustup_tmp_init}"
               echo ""
 
-              echo "[${caller}]: Copying ${rustup_tmp_init} file to ${HOME}/rust_install ..."
-              cp "${rustup_tmp_init}" "${HOME}/rust_install"
+              echo "[${caller}]: Copying ${rustup_tmp_init} file to ${install_temp_path}/rustup-init ..."
+              cp "${rustup_tmp_init}" "${install_temp_path}/rustup-init"
               get_status_message "$?"
               echo ""
 
               # Give execute permission to rustup-init file
               echo "[${caller}]: Giving execute permission to rustup-init file ..."
-              chmod +x "${HOME}/rust_install"
+              chmod +x "${install_temp_path}/rustup-init"
               get_status_message "$?"
               echo ""
 
               # Executing rustup-init file
               echo "[${caller}]: Executing rustup-init file ..."
-              "${HOME}/rust_install" -y
+              "${install_temp_path}/rustup-init" -y
             else
               echo "[${caller}]: Notice, rustup installation succeeded."
             fi
-
-            navigate_to "BACK"
-            # Removing rustup temporary files
-            echo "[${caller}]: Removing rustup temporary installation files ..."
-            rm -rf "${HOME}/rust_install"
-            get_status_message "$?"
-            echo ""
 
             echo "[${caller}]: Source rustc environment ..."
             source "${HOME}/.cargo/env"
@@ -1596,10 +1567,7 @@ maxibuild() {
             get_status_message "$?"
             echo ""
 
-            cd "${install_temp_path}/suricata-${version}" || {
-              echo "[${caller}]: ERROR, could not change directory to ${install_temp_path}"
-              exit 1
-            }
+            navigate_to "${install_temp_path}/suricata-${version}"
 
             echo "[${caller}]: Configuring suricata ..."
             ./configure --libdir=/usr/lib --prefix=/usr/ --sysconfdir=/etc --localstatedir=/var --datarootdir=/usr/share --enable-lua --enable-rust
@@ -1645,110 +1613,117 @@ maxibuild() {
             get_status_message "$?"
             echo ""
 
-            # Disabling stats in suricata configuration file
-            echo "[${caller}]: Disabling stats in suricata configuration file ..."
-            yq eval --inplace '.stats.enabled = no' /etc/suricata/suricata.yaml
-            get_status_message "$?"
-            echo ""
-
             # Disabling fast.log in suricata configuration file
             echo "[${caller}]: Disabling fast.log in suricata configuration file ..."
-            yq eval --inplace '.outputs.fast.enabled = no' /etc/suricata/suricata.yaml
+            yq eval --inplace '.outputs[] |= (select(has("fast")).fast.enabled = "no" | .)' /etc/suricata/suricata.yaml
             get_status_message "$?"
             echo ""
 
             # Disabling eve.json in suricata configuration file
             echo "[${caller}]: Disabling eve.json in suricata configuration file ..."
-            yq eval --inplace '.outputs.eve-log.enabled = no' /etc/suricata/suricata.yaml
+            yq eval --inplace '.outputs[] |= (select(has("eve-log")).eve-log.enabled = "no" | .)' /etc/suricata/suricata.yaml
             get_status_message "$?"
             echo ""
 
             # Disabling http.log in suricata configuration file
             echo "[${caller}]: Disabling http.log in suricata configuration file ..."
-            yq eval --inplace '.outputs.http-log.enabled = no' /etc/suricata/suricata.yaml
+
+            yq eval --inplace '.outputs[] |= (select(has("http-log")).http-log.enabled = "nox" | .)' /etc/suricata/suricata.yaml
             get_status_message "$?"
             echo ""
 
             # Disabling tls.log in suricata configuration file
             echo "[${caller}]: Disabling tls.log in suricata configuration file ..."
-            yq eval --inplace '.outputs.tls-log.enabled = no' /etc/suricata/suricata.yaml
+            yq eval --inplace '.outputs[] |= (select(has("tls-log")).tls-log.enabled = "no" | .)' /etc/suricata/suricata.yaml
+
             get_status_message "$?"
             echo ""
 
             # Disabling tls-store
             echo "[${caller}]: Disabling tls-store ..."
-            yq eval --inplace '.tls-store.enabled = no' /etc/suricata/suricata.yaml
+            yq eval --inplace '.outputs[] |= (select(has("tls-store")).tls-store.enabled = "no" | .)' /etc/suricata/suricata.yaml
             get_status_message "$?"
             echo ""
 
             # Disabling pcap-log
             echo "[${caller}]: Disabling pcap-log ..."
-            yq eval --inplace '.outputs.pcap-log.enabled = no' /etc/suricata/suricata.yaml
+            yq eval --inplace '.outputs[] |= (select(has("pcap-log")).pcap-log.enabled = "no" | .)' /etc/suricata/suricata.yaml
             get_status_message "$?"
             echo ""
 
             # Disabling alert-debug
             echo "[${caller}]: Disabling alert-debug ..."
-            yq eval --inplace '.outputs.alert-debug.enabled = no' /etc/suricata/suricata.yaml
+            yq eval --inplace '.outputs[] |= (select(has("alert-debug")).alert-debug.enabled = "nox" | .)' /etc/suricata/suricata.yaml
             get_status_message "$?"
             echo ""
 
             # Disabling alert-prelude
             echo "[${caller}]: Disabling alert-prelude ..."
-            yq eval --inplace '.outputs.alert-prelude.enabled = no' /etc/suricata/suricata.yaml
-            get_status_message "$?"
-            echo ""
-
-            # Disabling stats
-            echo "[${caller}]: Disabling stats ..."
-            yq eval --inplace '.stats.enabled = no' /etc/suricata/suricata.yaml
+            yq eval --inplace '.outputs[] |= (select(has("alert-prelude")).alert-prelude.enabled = "no" | .)' /etc/suricata/suricata.yaml
             get_status_message "$?"
             echo ""
 
             # Disabling syslog
             echo "[${caller}]: Disabling syslog ..."
-            yq eval --inplace '.outputs.syslog.enabled = no' /etc/suricata/suricata.yaml
+            yq eval --inplace '.outputs[] |= (select(has("syslog")).syslog.enabled = "nox" | .)' /etc/suricata/suricata.yaml
+            get_status_message "$?"
+            echo ""
+
+            # Disabling stats in suricata configuration file
+            echo "[${caller}]: Disabling stats in suricata configuration file ..."
+            yq eval --inplace '.outputs[] |= (select(has("stats")).stats.enabled = "no" | .)' /etc/suricata/suricata.yaml
             get_status_message "$?"
             echo ""
 
             # Disabling file-store
-            echo "[${caller}]: Disabling file-store ..."
-            yq eval --inplace '.file-store.enabled = no' /etc/suricata/suricata.yaml
-            get_status_message "$?"
-            echo ""
-
-            # Disabling file-store xff
-            echo "[${caller}]: Disabling file-store xff ..."
-            yq eval --inplace '.file-store.xff.enabled = no' /etc/suricata/suricata.yaml
+            echo "[${caller}]: Disabling file-store log ..."
+            yq eval --inplace '.outputs[] |= (select(has("file-store")).file-store.enabled = "no" | .)' /etc/suricata/suricata.yaml
             get_status_message "$?"
             echo ""
 
             # Disabling tpc-data
             echo "[${caller}]: Disabling tpc-data ..."
-            yq eval --inplace '.outputs.tcp-data.enabled = no' /etc/suricata/suricata.yaml
+            yq eval --inplace '.outputs[] |= (select(has("tcp-data")).tcp-data.enabled = "no" | .)' /etc/suricata/suricata.yaml
             get_status_message "$?"
             echo ""
 
             # Disabling http-body-data
             echo "[${caller}]: Disabling http-body-data ..."
-            yq eval --inplace '.outputs.http-body-data.enabled = no' /etc/suricata/suricata.yaml
+            yq eval --inplace '.outputs[] |= (select(has("http-body-data")).http-body-data.enabled = "no" | .)' /etc/suricata/suricata.yaml
             get_status_message "$?"
             echo ""
 
-            # Enabling lua output and add a lua script called maxiwall.lua
-            echo "[${caller}]: Enabling lua output and add a lua script called maxiwall.lua ..."
-            yq eval --inplace '.outputs.lua.enabled = yes' /etc/suricata/suricata.yaml
+            # Enabling lua output
+            echo "[${caller}]: Enabling lua output ..."
+            yq eval --inplace '.outputs[] |= (select(has("lua")).lua.enabled = "yes" | .)' /etc/suricata/suricata.yaml
+            get_status_message "$?"
+            echo ""
+
+            echo "[${caller}]: Creating lua script path /etc/suricata/lua-output ..."
+            yq eval --inplace '.outputs[] |= (select(has("lua")).lua."scripts-dir" = "/etc/suricata/lua-output" | .)' /etc/suricata/suricata.yaml
             get_status_message "$?"
             echo ""
 
             # Make sure the lua-output directory exists
-            echo "[${caller}]: Adding lua script ..."
-            yq eval --inplace '.outputs.lua.script-dir = "/etc/suricata/lua-output"' /etc/suricata/suricata.yaml
+            echo "[${caller}]: Creating /etc/suricata/lua-output directory ..."
+            mkdir -p /etc/suricata/lua-output
             get_status_message "$?"
             echo ""
 
-            echo "[${caller}]: Creating /etc/suricata/lua-output directory ..."
-            mkdir -p /etc/suricata/lua-output
+            echo "[${caller}]: Creating suricata rule path /var/lib/suricata/rules ..."
+            yq eval --inplace '.default-rule-path = "/var/lib/suricata/rules"' /etc/suricata/suricata.yaml
+            get_status_message "$?"
+            echo ""
+
+            # Make sure the rule directory exists
+            echo "[${caller}]: Creating /var/lib/suricata/rules directory ..."
+            mkdir -p /var/lib/suricata/rules
+            get_status_message "$?"
+            echo ""
+
+            # Disabling stats
+            echo "[${caller}]: Disabling stats ..."
+            yq eval --inplace '.stats.enabled = "no"' /etc/suricata/suricata.yaml
             get_status_message "$?"
             echo ""
 
@@ -1840,7 +1815,7 @@ maxibuild() {
           echo ""
 
           echo "[${caller}]: Updating suricata rules ..."
-          suricata-update
+          suricata-update 2>&1 | grep -v 'Found duplicate rule SID'
           get_status_message "$?"
           echo ""
 
@@ -1851,88 +1826,97 @@ maxibuild() {
           get_status_message "$?"
           echo ""
         elif [[ "${required_cp}" == @(maxiwall) ]]; then
-          if [[ "$(get_distro id)" == @(debian|ubuntu) ]]; then
-            local maxiwall_bin install_temp_path
-            install_temp_path="/usr/local/maxicode/maxiwall"
-            maxiwall_bin="${install_temp_path}/maxiwall"
+          local maxiwall_bin script_install_path
+          script_install_path="/usr/local/maxicode/maxiwall"
+          maxiwall_bin="${script_install_path}/maxiwall"
 
-            # Install lua dependencies
-            # Check if dkjson is installed, if not we install it
-            if ! luarocks list | grep '^dkjson' &>/dev/null; then
-              echo "[${caller}]: Installing dkjson ..."
-              luarocks install dkjson
-              get_status_message "$?"
-              echo ""
-            fi
-
-            # Check if luasocket is installed, if not we install it
-            if ! luarocks list | grep '^luasocket' &>/dev/null; then
-              echo "[${caller}]: Installing luasocket ..."
-              luarocks install luasocket
-              get_status_message "$?"
-              echo ""
-            fi
-
-            # Make sure suricata is installed, if not we install it
-            if ! command -v suricata &>/dev/null; then
-              echo "[${caller}]: Installing suricata ..."
-              echo "[${caller}]: Notice, suricata is missing. Installing suricata ..."
-              FORCE_INSTALL=true INCLUDE_CPS="suricata" maxibuild
-            fi
-
-            # Remove existing maxiwall installation
-            echo "[${caller}]: Removing existing maxiwall installation ..."
-            rm -rf "${install_temp_path}" "/usr/local/bin/maxiwall" "/usr/bin/maxiwall"
-            get_status_message "$?"
-            echo ""
-
-            # Creating maxiwall installation directory
-            echo "[${caller}]: Creating maxiwall installation directory ..."
-            mkdir -p "${install_temp_path}"
-            get_status_message "$?"
-            echo ""
-
-            echo "[${caller}]: Cloning the maxiwall repository ..."
-            git clone https://github.com/sofibox/maxiwall_public.git "${script_install_path}"
-            get_status_message "$?"
-            echo ""
-
-            # Change directory to script_install_path, if failed then exit with a message
-            cd "${script_install_path}" || {
-              echo "Failed to change directory to ${script_install_path}"
-              exit 1
-            }
-
-            echo "[${caller}]: Giving execute permission to maxiwall ..."
-            chmod +x ${maxiwall_bin}
-            get_status_message "$?"
-            echo ""
-
-            echo "[${caller}]: Creating a symbolic link for maxiwall ..."
-            ln -s "${maxiwall_bin}" "/usr/local/bin"
-            get_status_message "$?"
-
-            echo "[${caller}]: Checking whether maxiwall command is available ..."
-            command -v maxiwall &>/dev/null
-            get_status_message "$?"
-
-            # Adding lua script
-            echo "[${caller}]: Adding lua script ..."
-            yq eval --inplace '.outputs.lua.script = "maxiwall.lua"' /etc/suricata/suricata.yaml
-            get_status_message "$?"
-            echo ""
-
-            # Add   - /usr/local/maxicode/maxiwall/maxiwall.rules to suricata.yaml
-            echo "[${caller}]: Adding /usr/local/maxicode/maxiwall/maxiwall.rules to suricata.yaml only if it does not exist ..."
-            if ! grep -q '/usr/local/maxicode/maxiwall/maxiwall.rules' /etc/suricata/suricata.yaml; then
-              yq eval --inplace '.rule-files += ["/usr/local/maxicode/maxiwall/maxiwall.rules"]' /etc/suricata/suricata.yaml
-              get_status_message "$?"
-              echo ""
-            fi
-
+          # Make sure suricata is installed, if not we install it
+          if ! command -v suricata &>/dev/null; then
+            echo "[${caller}]: Notice, suricata is missing. Installing suricata ..."
+            INCLUDE_CPS="suricata" maxibuild
+          else
+            echo "[${caller}]: Notice, suricata is already installed. Reinstalling suricata ..."
+            FORCE_INSTALL=true INCLUDE_CPS="suricata" maxibuild
           fi
 
-          # TODO
+          navigate_to "${SCRIPT_PATH}"
+
+          # Make sure luarocks is installed, if not we install it
+          if ! command -v luarocks &>/dev/null; then
+            echo "[${caller}]: Installing luarocks ..."
+            if [[ "$(get_distro id)" == @(debian|ubuntu) ]]; then
+              apt-get install -y luarocks
+              get_status_message "$?"
+              echo ""
+            elif [[ "$(get_distro id)" == @(centos|almalinux|rockylinux) ]]; then
+              yum install -y luarocks
+              get_status_message "$?"
+              echo ""
+            fi
+          fi
+
+          # Install lua dependencies
+          # Check if dkjson is installed, if not we install it
+          if ! luarocks list | grep '^dkjson' &>/dev/null; then
+            echo "[${caller}]: Installing dkjson ..."
+            luarocks install dkjson
+            get_status_message "$?"
+            echo ""
+          fi
+
+          # Check if luasocket is installed, if not we install it
+          if ! luarocks list | grep '^luasocket' &>/dev/null; then
+            echo "[${caller}]: Installing luasocket ..."
+            luarocks install luasocket
+            get_status_message "$?"
+            echo ""
+          fi
+
+          echo "[${caller}]: Stopping suricata service ..."
+          systemctl stop suricata.service
+          get_status_message "$?"
+          echo ""
+
+          # Remove existing maxiwall installation
+          echo "[${caller}]: Removing existing maxiwall installation ..."
+          rm -rf "${script_install_path}" "/usr/local/bin/maxiwall" "/usr/bin/maxiwall"
+          get_status_message "$?"
+          echo ""
+
+          # Creating maxiwall installation directory
+          echo "[${caller}]: Creating maxiwall installation directory ..."
+          mkdir -p "${script_install_path}"
+          get_status_message "$?"
+          echo ""
+
+          echo "[${caller}]: Cloning the maxiwall repository ..."
+          git clone https://github.com/sofibox/maxiwall_public.git "${script_install_path}"
+          get_status_message "$?"
+          echo ""
+
+          # Change directory to script_install_path, if failed then exit with a message
+          navigate_to "${script_install_path}"
+
+          echo "[${caller}]: Giving execute permission to maxiwall ..."
+          chmod +x ${maxiwall_bin}
+          get_status_message "$?"
+          echo ""
+
+          echo "[${caller}]: Creating a symbolic link for maxiwall ..."
+          ln -s "${maxiwall_bin}" "/usr/local/bin"
+          get_status_message "$?"
+
+          echo "[${caller}]: Checking whether maxiwall command is available ..."
+          command -v maxiwall &>/dev/null
+          get_status_message "$?"
+
+          # Running maxiwall init
+          echo "[${caller}]: Running maxiwall init ..."
+          maxiwall init
+          get_status_message "$?"
+          echo ""
+
+          # At this point maxiwall will do the rest of the installation
 
         elif
 
@@ -1999,10 +1983,7 @@ maxibuild() {
             get_status_message "$?"
             echo ""
 
-            cd "${install_temp_path}" || {
-              echo "[${caller}]: Unable to change directory to ${install_temp_path}"
-              exit 1
-            }
+            navigate_to "${install_temp_path}"
 
             echo "[${caller}]: Downloading lua ${lua_latest_web_version} ..."
             curl -R -O "https://www.lua.org/ftp/lua-${lua_latest_web_version}.tar.gz"
@@ -2014,10 +1995,7 @@ maxibuild() {
             get_status_message "$?"
             echo ""
 
-            cd "lua-${lua_latest_web_version}" || {
-              echo "[${caller}]: Unable to change directory to ${install_temp_path}/lua-${lua_latest_web_version}"
-              exit 1
-            }
+            navigate_to "lua-${lua_latest_web_version}"
 
             echo "[${caller}]: Running make linux test ..."
             make linux test
@@ -2031,13 +2009,12 @@ maxibuild() {
 
             # Make sure luarocks is installed, if not we install it
             if ! command -v luarocks &>/dev/null; then
+              echo "[${caller}]: Installing luarocks ..."
               if [[ "$(get_distro id)" == @(debian|ubuntu) ]]; then
-                echo "[${caller}]: Installing luarocks ..."
                 apt-get install -y luarocks
                 get_status_message "$?"
                 echo ""
               elif [[ "$(get_distro id)" == @(centos|almalinux|rockylinux) ]]; then
-                echo "[${caller}]: Installing luarocks ..."
                 yum install -y luarocks
                 get_status_message "$?"
                 echo ""
@@ -2069,10 +2046,7 @@ maxibuild() {
             echo ""
 
             # Change directory to script_install_path, if failed then exit with a message
-            cd "${script_install_path}" || {
-              echo "Failed to change directory to ${script_install_path}"
-              exit 1
-            }
+            navigate_to "${script_install_path}"
 
             echo "[${caller}]: Giving execute permission to aipdb ..."
             chmod +x ${aipdb_bin}
@@ -2112,10 +2086,7 @@ maxibuild() {
             echo ""
 
             # Change directory to script_install_path, if failed then exit with a message
-            cd "${script_install_path}" || {
-              echo "Failed to change directory to ${script_install_path}"
-              exit 1
-            }
+            navigate_to "${script_install_path}"
 
             echo "[${caller}]: Giving execute permission to greynoise ..."
             chmod +x ${greynoise_bin}
@@ -2158,10 +2129,7 @@ maxibuild() {
             echo ""
 
             # Change directory to script_install_path, if failed then exit with a message
-            cd "${script_install_path}" || {
-              echo "Failed to change directory to ${script_install_path}"
-              exit 1
-            }
+            navigate_to "${script_install_path}"
 
             echo "[${caller}]: Giving execute permission to virustotal ..."
             chmod +x ${virustotal_bin}
