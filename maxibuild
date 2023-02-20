@@ -1519,13 +1519,12 @@ maxibuild() {
 
             fi
 
+            navigate_to "${install_temp_path}"
 
             echo "[${caller}]: Installing suricata python dependencies ..."
             pip3 install PyYAML
             get_status_message "$?"
             echo ""
-
-             navigate_to "${install_temp_path}"
 
             echo "[${caller}]: Installing rustc package from https://sh.rustup.rs ..."
             local rustup_install_temp_error
