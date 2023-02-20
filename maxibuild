@@ -2,7 +2,7 @@
 #"=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~="
 # ==================================================
 _APP_SPECIFIC_NAME="Maxibuild"
-_APP_VERSION="0.3.8"
+_APP_VERSION="0.3.9"
 _APP_STATUS="alpha"
 _APP_INFO="${_APP_SPECIFIC_NAME} is a bash script to manage packages."
 _APP_VERSION_STATUS="${_APP_VERSION}-${_APP_STATUS}"
@@ -224,7 +224,7 @@ maxibuild() {
   for required_cp in ${required_cps[*]}; do
     # If the required package is a special command, we list it here
     # For example `puttygen` is a command and its package name is `putty-tools`. So if we want to install putty-tools, we can use `puttygen` as the command to install
-    if [[ "${required_cp}" == @(mail|linode-cli|ipcalc|maxipi|maxiaide|maxigpg|maxiperm|maxida|maxilog|maxiwall|dbxcli|ip|pstree|netstat|puttygen|grepaddr|gotify-server|gotify-client|blcheck|wp|wpcli|rclone|yq|suricata_distro|suricata_backport|suricata|suricata_v6.0.9|suricata_v6.0.10|suricata_v7.0.0-rc1|lua|aipdb|greynoise|virustotal) ]]; then
+    if [[ "${required_cp}" == @(mail|linode-cli|ipcalc|maxipi|maxiaide|maxigpg|maxiperm|maxida|maxilog|maxiwall|dbxcli|ip|pstree|netstat|puttygen|grepaddr|gotify-server|gotify-client|blcheck|wp|wpcli|rclone|yq|suricata_distro|suricata_backport|suricata|suricata_v6.0.9|suricata_v6.0.10|suricata_v7.0.0-rc1|lua|lua5.1|lua5.2|lua5.3|lua5.4|aipdb|greynoise|virustotal) ]]; then
 
       local cmd_status retval
       # Using command to obtain installation status
@@ -1447,8 +1447,8 @@ maxibuild() {
           # Manual version - As February 15 2023, the latest version is v6.0.10 STABLE and v.7.0.0 RC 1
           elif [[ "${required_cp}" == @(suricata|suricata_v6.0.9|suricata_v6.0.10|suricata_v7.0.0-rc1) ]]; then
 
-            local suricata_download_url install_temp_path="${HOME}/suricata_install" version
-
+            local suricata_download_url install_temp_path version
+            install_temp_path="${HOME}/suricata_install"
             # We need to make sure that yq is installed. If not install it
             if ! command -v yq &>/dev/null; then
               echo "[${caller}]: Notice, yq is missing. Installing yq ..."
@@ -1557,8 +1557,10 @@ maxibuild() {
             get_status_message "$?"
             echo ""
 
+            navigate_to "${install_temp_path}"
+
             echo "[${caller}]: Downloading suricata latest version ..."
-            curl -sL "${suricata_download_url}" -o "${install_temp_path}/suricata.tar.gz"
+            curl -L "${suricata_download_url}" -o "${install_temp_path}/suricata.tar.gz"
             get_status_message "$?"
             echo ""
 
@@ -1918,42 +1920,43 @@ maxibuild() {
 
         elif
 
-          [[ "${required_cp}" == @(lua) ]]
+          [[ "${required_cp}" == @(lua|lua5.1|lua5.2|lua5.3|lua5.4) ]]
         then
           if [[ "$(get_distro id)" == @(debian|ubuntu) ]]; then
-            local lua_installed_versions lua_latest_web_version install_temp_path
+            local lua_installed_versions lua_latest_web_version lua_generic_version lua_select_version luarocks_version install_temp_path
 
             install_temp_path="${TEMP_PATH}/lua_install"
-            echo "[${caller}]: Removing installation files manually ..."
-            rm -rf /etc/alternatives/lua-compiler /etc/alternatives/lua-compiler-manual /etc/alternatives/lua-interpreter \
-              /etc/alternatives/lua-manual /usr/bin/lua /usr/bin/luac /usr/share/man/man1/lua.1.gz /usr/share/man/man1/luac.1.gz \
-              /var/lib/dpkg/alternatives/lua-compiler /var/lib/dpkg/alternatives/lua-interpreter \
-              /usr/local/bin/lua /usr/local/bin/luac /usr/local/include/lauxlib.h /usr/local/include/lua.h \
-              /usr/local/include/lua.hpp /usr/local/include/luaconf.h /usr/local/include/lualib.h /usr/local/lib/liblua.a \
-              /usr/local/lib/lua /usr/local/share/lua /usr/local/share/man/man1/lua.1 /usr/local/share/man/man1/luac.1
 
-            get_status_message "$?"
-            echo ""
-            # These are common suricata versions for debian/ubuntu
-            lua_installed_versions=(5.4 5.3 5.2 5.1)
+            # echo "[${caller}]: Removing installation files manually ..."
+            # rm -rf /etc/alternatives/lua-compiler /etc/alternatives/lua-compiler-manual /etc/alternatives/lua-interpreter \
+            #  /etc/alternatives/lua-manual /usr/bin/lua /usr/bin/luac /usr/share/man/man1/lua.1.gz /usr/share/man/man1/luac.1.gz \
+            #  /var/lib/dpkg/alternatives/lua-compiler /var/lib/dpkg/alternatives/lua-interpreter \
+            #  /usr/local/bin/lua /usr/local/bin/luac /usr/local/include/lauxlib.h /usr/local/include/lua.h \
+            #  /usr/local/include/lua.hpp /usr/local/include/luaconf.h /usr/local/include/lualib.h /usr/local/lib/liblua.a \
+            #  /usr/local/lib/lua /usr/local/share/lua /usr/local/share/man/man1/lua.1 /usr/local/share/man/man1/luac.1
 
-            for i in "${lua_installed_versions[@]}"; do
-              echo "[${caller}]: Removing lua${i} installation using apt-get ..."
-              apt-get remove -y "lua${i}"
-              get_status_message "$?"
-              echo ""
+            #get_status_message "$?"
+            #echo ""
+            # # These are common suricata versions for debian/ubuntu
+            #lua_installed_versions=(5.4 5.3 5.2 5.1)
 
-              # If lua is not installed using distro we manually remove all the lua files
+            # for i in "${lua_installed_versions[@]}"; do
+            #   echo "[${caller}]: Removing lua${i} installation using apt-get ..."
+            #   apt-get remove -y "lua${i}"
+            #   get_status_message "$?"
+            #   echo ""
 
-              echo "[${caller}]: Removing other lua installation files ..."
-              rm -rf "/usr/bin/lua${i}" "/usr/bin/luac${i}" "/usr/share/doc/lua${i}" "/usr/share/man/man1/lua${i}.1.gz" \
-                "/usr/share/man/man1/luac${i}.1.gz" "/var/lib/dpkg/info/lua${i}.list" "/var/lib/dpkg/info/lua${i}.md5sums" \
-                "/var/lib/dpkg/info/lua${i}.postinst" "/var/lib/dpkg/info/lua${i}.prerm" "/usr/local/lib/lua/${i}" \
-                "/usr/local/share/lua/${i}"
-              get_status_message "$?"
-              echo ""
+            #   # If lua is not installed using distro we manually remove all the lua files
 
-            done
+            #   echo "[${caller}]: Removing other lua installation files ..."
+            #   rm -rf "/usr/bin/lua${i}" "/usr/bin/luac${i}" "/usr/share/doc/lua${i}" "/usr/share/man/man1/lua${i}.1.gz" \
+            #     "/usr/share/man/man1/luac${i}.1.gz" "/var/lib/dpkg/info/lua${i}.list" "/var/lib/dpkg/info/lua${i}.md5sums" \
+            #     "/var/lib/dpkg/info/lua${i}.postinst" "/var/lib/dpkg/info/lua${i}.prerm" "/usr/local/lib/lua/${i}" \
+            #     "/usr/local/share/lua/${i}"
+            #   get_status_message "$?"
+            #   echo ""
+
+            # done
 
             echo "[${caller}]: Installing development tools ..."
             apt-get install -y build-essential libreadline-dev
@@ -1962,13 +1965,48 @@ maxibuild() {
 
             echo "[${caller}]: Getting lua latest version from web ..."
 
-            lua_latest_web_version="$(curl -sL https://www.lua.org/ftp/ | grep -Eo 'HREF="lua-[0-9]+\.[0-9]+\.[0-9]+.tar.gz' | sort -V | tail -n1 | cut -d'-' -f2 | grep -Eo '[0-9]\.[0-9]\.[0-9]+')"
-            if [ -z "${lua_latest_web_version}" ]; then
-              echo "[${caller}]: Unable to get lua latest version from web"
-              exit 1
+            if [[ "${required_cp}" == @(lua5.1) ]]; then
+              # Download only lua5.1
+              lua_generic_version=5.1
+              lua_select_version="5.1.5"
+            elif [[ "${required_cp}" == @(lua5.2) ]]; then
+              lua_generic_version=5.2
+              lua_select_version="5.2.4"
+            elif [[ "${required_cp}" == @(lua5.3) ]]; then
+              lua_generic_version=5.3
+              lua_select_version="5.3.6"
+            elif [[ "${required_cp}" == @(lua5.4) ]]; then
+              lua_generic_version=5.4
+              lua_select_version="5.4.4"
+            else # lua
+
+              lua_select_version=$(curl -s http://www.lua.org/ftp/ | grep -o 'lua-[0-9]\.[0-9]\.[0-9]\.tar\.gz' | sed 's/lua-//' | sed 's/\.tar\.gz//' | sort -rV | head -n 1)
+              lua_generic_version=$(echo "${lua_select_version}" | cut -d '.' -f 1,2)
+
+              if [ -z "${lua_select_version}" ]; then
+                echo "[${caller}]: Unable to get lua latest version from web"
+                exit 1
+              fi
             fi
 
-            echo "[${caller}]: Lua latest version is ${lua_latest_web_version}"
+            # Print lua generic version
+            echo "[${caller}]: Lua generic version to be installed is ${lua_generic_version}"
+            echo ""
+            # Print lua version
+            echo "[${caller}]: Lua version to be installed is ${lua_select_version}"
+            echo ""
+
+            echo "[${caller}]: Removing lua ${lua_generic_version} installation using apt-get ..."
+            apt-get remove -y "lua${lua_generic_version}"
+            get_status_message "$?"
+            echo ""
+
+            echo "[${caller}]: Removing lua ${lua_generic_version} directories ..."
+            rm -rf "/usr/local/bin/lua" "/usr/bin/lua" "/usr/local/bin/luac" "/usr/bin/luac" "/usr/local/bin/lua${lua_generic_version} /usr/bin/lua${lua_generic_version}" "/usr/local/bin/luac${lua_generic_version}" \
+              "/usr/bin/luac${lua_generic_version}" "/usr/share/man/man1/${lua_generic_version}.1.gz" "/usr/share/man/man1/luac${lua_generic_version}.1.gz" "/var/lib/dpkg/info/lua${lua_generic_version}.list" \
+              "/var/lib/dpkg/info/lua${lua_generic_version}.md5sums" "/var/lib/dpkg/info/lua${lua_generic_version}.postinst" "/var/lib/dpkg/info/lua${lua_generic_version}.prerm" "/usr/local/lib/lua/${lua_generic_version}" \
+              "/usr/local/share/lua/${lua_generic_version}" "/usr/local/lua-${lua_generic_version}"
+            get_status_message "$?"
             echo ""
 
             echo "[${caller}]: Removing lua previous installation temporary files ..."
@@ -1983,17 +2021,17 @@ maxibuild() {
 
             navigate_to "${install_temp_path}"
 
-            echo "[${caller}]: Downloading lua ${lua_latest_web_version} ..."
-            curl -R -O "https://www.lua.org/ftp/lua-${lua_latest_web_version}.tar.gz"
+            echo "[${caller}]: Downloading lua ${lua_select_version} ..."
+            curl -R -O "https://www.lua.org/ftp/lua-${lua_select_version}.tar.gz"
             get_status_message "$?"
             echo ""
 
-            echo "[${caller}]: Extracting lua ${lua_latest_web_version} ..."
-            tar zxf "lua-${lua_latest_web_version}.tar.gz"
+            echo "[${caller}]: Extracting lua ${lua_select_version} ..."
+            tar zxf "lua-${lua_select_version}.tar.gz"
             get_status_message "$?"
             echo ""
 
-            navigate_to "lua-${lua_latest_web_version}"
+            navigate_to "lua-${lua_select_version}"
 
             echo "[${caller}]: Running make linux test ..."
             make linux test
@@ -2001,23 +2039,59 @@ maxibuild() {
             echo ""
 
             echo "[${caller}]: Running make install ..."
+            make install INSTALL_TOP="/usr/local/lua-${lua_select_version}"
+            get_status_message "$?"
+            echo ""
+
+            # Create symlink for lua and luac binaries for specific version
+            echo "[${caller}]: Creating lua symlink for specific version ..."
+            ln -s "/usr/local/lua-${lua_select_version}/bin/lua" "/usr/local/bin/lua${lua_generic_version}"
+            ln -s "/usr/local/lua-${lua_select_version}/bin/luac" "/usr/local/bin/luac${lua_generic_version}"
+            get_status_message "$?"
+            echo ""
+
+            # This for main lua
+            echo "[${caller}]: Creating lua symbolic links (for the last install of lua) ..."
+            ln -s "/usr/local/lua-${lua_select_version}/bin/lua" "/usr/local/bin/lua"
+            ln -s "/usr/local/lua-${lua_select_version}/bin/luac" "/usr/local/bin/luac"
+            get_status_message "$?"
+            echo ""
+
+            navigate_to "${install_temp_path}"
+            # luarocks installation
+            echo "[$caller}]: Downloading luarocks ..."
+            luarocks_version="3.8.0"
+            curl -R -O "https://luarocks.github.io/luarocks/releases/luarocks-${luarocks_version}.tar.gz"
+            get_status_message "$?"
+            echo ""
+
+            echo "[$caller}]: Extracting luarocks ..."
+            tar zxf "luarocks-${luarocks_version}.tar.gz"
+            get_status_message "$?"
+            echo ""
+
+            navigate_to "luarocks-${luarocks_version}"
+
+            echo "[$caller}]: Running luarocks configure ..."
+            ./configure --with-lua="/usr/local/lua-${lua_select_version}" --lua-version="${lua_generic_version}" --with-lua-include="/usr/local/lua-${lua_select_version}/include"
+            get_status_message "$?"
+            echo ""
+
+            echo "[$caller}]: Running luarocks make ..."
+            make build
+            get_status_message "$?"
+            echo ""
+
+            echo "[$caller}]: Running luarocks install ..."
             make install
             get_status_message "$?"
             echo ""
 
-            # Make sure luarocks is installed, if not we install it
-            if ! command -v luarocks &>/dev/null; then
-              echo "[${caller}]: Installing luarocks ..."
-              if [[ "$(get_distro id)" == @(debian|ubuntu) ]]; then
-                apt-get install -y luarocks
-                get_status_message "$?"
-                echo ""
-              elif [[ "$(get_distro id)" == @(centos|almalinux|rockylinux) ]]; then
-                yum install -y luarocks
-                get_status_message "$?"
-                echo ""
-              fi
-            fi
+            # Remove the temporary installation files
+            echo "[${caller}]: Removing lua temporary installation files ..."
+            rm -rf "${install_temp_path}"
+            get_status_message "$?"
+            echo ""
 
           fi
         elif [[ "${required_cp}" == @(aipdb) ]]; then
