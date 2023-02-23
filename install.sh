@@ -87,7 +87,7 @@ fi
 echo ""
 
 echo "Cloning maxibuild repository ..."
-git clone https://github.com/sofibox/maxibuild_public.git /usr/local/maxicode/maxibuild
+git clone --depth 1 https://github.com/sofibox/maxibuild_public.git /usr/local/maxicode/maxibuild
 check_status "$?" " [OK]" " [FAILED]" "exit_on_failed"
 echo ""
 
