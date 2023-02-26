@@ -1575,12 +1575,18 @@ maxibuild() {
             navigate_to "${install_temp_path}/suricata-${version}"
 
             echo "[${caller}]: Configuring suricata ..."
-            ./configure --libdir=/usr/lib --prefix=/usr/ --sysconfdir=/etc --localstatedir=/var --datarootdir=/usr/share --enable-lua --enable-rust
+            ./configure --libdir=/usr/lib --prefix=/usr/ --sysconfdir=/etc --localstatedir=/var --datarootdir=/usr/share --enable-lua
             get_status_message "$?"
             echo ""
 
             echo "[${caller}]: Building suricata ..."
             make install-full
+            get_status_message "$?"
+            echo ""
+
+            # Remove rustc package
+            echo "[${caller}]: Removing rustc package ..."
+            rustup self uninstall -y
             get_status_message "$?"
             echo ""
 
