@@ -1849,6 +1849,7 @@ maxibuild() {
           fi
 
           navigate_to "${SCRIPT_PATH}"
+          echo ""
 
           # Make sure luarocks is installed, if not we install it
           if ! command -v luarocks &>/dev/null; then
@@ -1881,10 +1882,15 @@ maxibuild() {
             echo ""
           fi
 
-          echo "[${caller}]: Stopping suricata service ..."
-          systemctl stop suricata.service
-          get_status_message "$?"
-          echo ""
+          # Make sure suricata is stop before we start the installation
+          # use loop to make sure suricata is stop
+
+          if [[ "$(systemctl is-active suricata.service)" == "active" ]]; then
+            echo "[${caller}]: Stopping suricata service ..."
+            systemctl stop suricata.service
+            get_status_message "$?"
+            echo ""
+          fi
 
           # Remove existing maxiwall installation
           echo "[${caller}]: Removing existing maxiwall installation ..."
@@ -1905,6 +1911,7 @@ maxibuild() {
 
           # Change directory to script_install_path, if failed then exit with a message
           navigate_to "${script_install_path}"
+          echo ""
 
           echo "[${caller}]: Giving execute permission to maxiwall ..."
           chmod +x ${maxiwall_bin}
@@ -1914,10 +1921,12 @@ maxibuild() {
           echo "[${caller}]: Creating a symbolic link for maxiwall ..."
           ln -s "${maxiwall_bin}" "/usr/local/bin"
           get_status_message "$?"
+          echo ""
 
           echo "[${caller}]: Checking whether maxiwall command is available ..."
           command -v maxiwall &>/dev/null
           get_status_message "$?"
+          echo ""
 
           # Running maxiwall init
           echo "[${caller}]: Running maxiwall init ..."
