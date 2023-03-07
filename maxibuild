@@ -1478,9 +1478,16 @@ maxibuild() {
               version="6.0.10"
             elif [[ "${required_cp}" == "suricata_v7.0.0-rc1" ]]; then
               version="7.0.0-rc1"
+            else
+              echo "[${caller}]: ERROR, suricata version ${required_cp} is not supported"
+              exit 1
             fi
 
             suricata_download_url="https://www.openinfosecfoundation.org/download/suricata-${version}.tar.gz"
+
+            echo "[${caller}]: Suricata version is: ${version}"
+            echo "[${caller}]: Download URL is: ${suricata_download_url}"
+            echo ""
 
             echo "[${caller}]: Removing suricata previous installation temporary files ..."
             rm -rf "${install_temp_path}"
