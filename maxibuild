@@ -1562,7 +1562,7 @@ maxibuild() {
 
             navigate_to "${install_temp_path}"
 
-            echo "[${caller}]: Downloading suricata latest version ..."
+            echo "[${caller}]: Downloading suricata latest version from ${suricata_download_url} ..."
             curl -L "${suricata_download_url}" -o "${install_temp_path}/suricata.tar.gz"
             get_status_message "$?"
             echo ""
