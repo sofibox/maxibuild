@@ -1452,6 +1452,8 @@ maxibuild() {
 
             navigate_to "${SCRIPT_PATH}"
 
+            TEMP_INCLUDE_CPS="${INCLUDE_CPS}"
+
             # We need to make sure that yq is installed. If not install it
             if ! command -v yq &>/dev/null; then
               echo "[${caller}]: Notice, yq is missing. Installing yq ..."
@@ -1463,6 +1465,8 @@ maxibuild() {
               echo "[${caller}]: Notice, lua is missing. Installing lua ..."
               FORCE_INSTALL=true INCLUDE_CPS="lua" maxibuild
             fi
+
+            INCLUDE_CPS="${TEMP_INCLUDE_CPS}"
 
             # Get suricata latest version number without the v prefix
 
@@ -2382,6 +2386,7 @@ CALLER="$(basename -- "$0")"
 OLD_PATH="${PWD}"
 FORCE_INSTALL=false
 INCLUDE_CPS=""
+TEMP_INCLUDE_CPS=""
 
 # If no argument is supplied we quit
 if [[ $# -eq 0 ]]; then
