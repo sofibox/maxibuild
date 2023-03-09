@@ -204,7 +204,7 @@ navigate_to() {
 
 }
 
-maxibuild() {
+maxibuild_cmd() {
 
   local caller required_cps missing_count
 
@@ -1419,7 +1419,6 @@ maxibuild() {
               echo ""
             else
               echo "[${caller}]: ERROR, suricata distro installation is not available (or implemented) for $(get_distro id)"
-
             fi
           # Latest version as Jan 14 2023 is v6.0.9 for Debian 11
           elif [[ "${required_cp}" == "suricata_backport" ]]; then
@@ -1452,21 +1451,18 @@ maxibuild() {
 
             navigate_to "${SCRIPT_PATH}"
 
-            TEMP_INCLUDE_CPS="${INCLUDE_CPS}"
-
             # We need to make sure that yq is installed. If not install it
             if ! command -v yq &>/dev/null; then
               echo "[${caller}]: Notice, yq is missing. Installing yq ..."
-              FORCE_INSTALL=true INCLUDE_CPS="yq" maxibuild
+              maxibuild install yq --force
             fi
 
             # We need to make sure that lua is installed. If not install it
             if ! command -v lua &>/dev/null; then
               echo "[${caller}]: Notice, lua is missing. Installing lua ..."
-              FORCE_INSTALL=true INCLUDE_CPS="lua" maxibuild
+              maxibuild install lua --force
             fi
 
-            INCLUDE_CPS="${TEMP_INCLUDE_CPS}"
 
             # Get suricata latest version number without the v prefix
 
@@ -1856,7 +1852,7 @@ maxibuild() {
 
           if ! command -v suricata &>/dev/null; then
             echo "[${caller}]: Notice, suricata is missing. Installing suricata ..."
-            INCLUDE_CPS="suricata" maxibuild
+            maxibuild install suricata
           fi
 
           navigate_to "${SCRIPT_PATH}"
@@ -2386,7 +2382,6 @@ CALLER="$(basename -- "$0")"
 OLD_PATH="${PWD}"
 FORCE_INSTALL=false
 INCLUDE_CPS=""
-TEMP_INCLUDE_CPS=""
 
 # If no argument is supplied we quit
 if [[ $# -eq 0 ]]; then
@@ -2451,4 +2446,4 @@ while [ "$#" -gt 0 ]; do
 
 done
 
-maxibuild "$@"
+maxibuild_cmd "$@"
