@@ -224,7 +224,7 @@ maxibuild_cmd() {
   for required_cp in ${required_cps[*]}; do
     # If the required package is a special command, we list it here
     # For example `puttygen` is a command and its package name is `putty-tools`. So if we want to install putty-tools, we can use `puttygen` as the command to install
-    if [[ "${required_cp}" == @(mail|linode-cli|ipcalc|maxipi|maxiaide|maxigpg|maxiperm|maxida|maxilog|maxiwall|dbxcli|ip|pstree|netstat|puttygen|grepaddr|gotify-server|gotify-client|blcheck|wp|wpcli|rclone|yq|suricata_distro|suricata_backport|suricata|suricata_v6.0.9|suricata_v6.0.10|suricata_v7.0.0-rc1|lua|lua5.1|lua5.2|lua5.3|lua5.4|aipdb|greynoise|virustotal|mysqltuner) ]]; then
+    if [[ "${required_cp}" == @(mail|linode-cli|ipcalc|maxipi|maxiaide|maxigpg|maxiperm|maxida|maxilog|maxiwall|dbxcli|ip|pstree|netstat|puttygen|grepaddr|gotify-server|gotify-client|blcheck|wp|wpcli|rclone|yq|suricata_distro|suricata_backport|suricata|suricata_v6.0.9|suricata_v6.0.10|suricata_v7.0.0-rc1|lua|lua5.1|lua5.2|lua5.3|lua5.4|aipdb|greynoise|virustotal|mysqltuner|netcat) ]]; then
 
       local cmd_status retval
       # Using command to obtain installation status
@@ -1463,7 +1463,6 @@ maxibuild_cmd() {
               maxibuild install lua --force
             fi
 
-
             # Get suricata latest version number without the v prefix
 
             if [[ "${required_cp}" == "suricata" ]]; then
@@ -2287,6 +2286,19 @@ maxibuild_cmd() {
 
           fi
 
+        elif [[ "${required_cp}" == @(netcat) ]]; then
+
+          if [[ "$(get_distro id)" == @(debian|ubuntu) ]]; then
+
+            apt-get -y install netcat-openbsd
+            get_status_message "$?"
+            echo ""
+
+            echo "[${caller}]: Checking whether netcat (nc) command is available ..."
+            command -v nc &>/dev/null
+            get_status_message "$?"
+
+          fi
         else
           echo "[${caller}]: Installing ${required_cp} from the default repository ..."
           # Do normal distro installation
